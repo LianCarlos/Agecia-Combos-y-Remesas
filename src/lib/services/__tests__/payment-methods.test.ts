@@ -54,8 +54,8 @@ describe("getActivePaymentMethods", () => {
 
   it("retorna array de métodos de pago activos", async () => {
     const mockData: PaymentMethod[] = [
-      { id: "pm-1", name: "Zelle", is_active: true, created_at: "2026-01-01" },
-      { id: "pm-2", name: "Western Union", is_active: true, created_at: "2026-01-01" },
+      { id: "pm-1", name: "Zelle", active: true, currency_id: "cur-1", created_at: "2026-01-01" },
+      { id: "pm-2", name: "Western Union", active: true, currency_id: "cur-1", created_at: "2026-01-01" },
     ];
     setupSelectChain({ data: mockData, error: null });
 
@@ -85,8 +85,8 @@ describe("getAllPaymentMethods", () => {
 
   it("retorna todos los métodos de pago (activos e inactivos)", async () => {
     const mockData: PaymentMethod[] = [
-      { id: "pm-1", name: "Zelle", is_active: true, created_at: "2026-01-01" },
-      { id: "pm-2", name: "Western Union", is_active: false, created_at: "2026-01-01" },
+      { id: "pm-1", name: "Zelle", active: true, currency_id: "cur-1", created_at: "2026-01-01" },
+      { id: "pm-2", name: "Western Union", active: false, currency_id: "cur-1", created_at: "2026-01-01" },
     ];
     setupSelectAllChain({ data: mockData, error: null });
 
@@ -116,17 +116,18 @@ describe("createPaymentMethod", () => {
     const newMethod: PaymentMethod = {
       id: "pm-new",
       name: "PayPal",
-      is_active: true,
+      active: true,
+      currency_id: "cur-1",
       created_at: "2026-06-05",
     };
     mockSingle.mockResolvedValue({ data: newMethod, error: null });
     mockSelect.mockReturnValue({ single: mockSingle });
 
-    const result = await createPaymentMethod("PayPal");
+    const result = await createPaymentMethod("PayPal", "cur-1");
 
     expect(result).not.toBeNull();
     expect(result!.name).toBe("PayPal");
-    expect(result!.is_active).toBe(true);
+    expect(result!.active).toBe(true);
   });
 
   it("retorna null cuando hay error al crear", async () => {
@@ -134,7 +135,7 @@ describe("createPaymentMethod", () => {
     mockSingle.mockResolvedValue({ data: null, error: { message: "Duplicate" } });
     mockSelect.mockReturnValue({ single: mockSingle });
 
-    const result = await createPaymentMethod("Duplicado");
+    const result = await createPaymentMethod("Duplicado", "cur-1");
 
     expect(result).toBeNull();
     consoleSpy.mockRestore();
@@ -150,7 +151,8 @@ describe("updatePaymentMethod", () => {
     const updated: PaymentMethod = {
       id: "pm-1",
       name: "Zelle Actualizado",
-      is_active: false,
+      active: false,
+      currency_id: "cur-1",
       created_at: "2026-01-01",
     };
     mockSingle.mockResolvedValue({ data: updated, error: null });
@@ -160,7 +162,7 @@ describe("updatePaymentMethod", () => {
 
     expect(result).not.toBeNull();
     expect(result!.name).toBe("Zelle Actualizado");
-    expect(result!.is_active).toBe(false);
+    expect(result!.active).toBe(false);
   });
 
   it("retorna null cuando hay error al actualizar", async () => {

@@ -47,11 +47,11 @@ function setupAllChain(result: { data: unknown; error: unknown }) {
 
 const mockCombo: Combo = {
   id: "combo-1",
-  titulo: "Combo Familiar",
-  descripcion: "Paquete para toda la familia",
-  precio_usd: 49.99,
-  imagen_url: "https://example.com/img.jpg",
-  disponible: true,
+  title: "Combo Familiar",
+  description: "Paquete para toda la familia",
+  price_usd: 49.99,
+  image_url: "https://example.com/img.jpg",
+  available: true,
   created_at: "2026-01-01",
   updated_at: "2026-06-01",
 };
@@ -61,16 +61,16 @@ describe("getActiveCombos", () => {
     jest.clearAllMocks();
   });
 
-  it("retorna array de combos disponibles (disponible=true)", async () => {
+  it("retorna array de combos disponibles (available=true)", async () => {
     const mockData: Combo[] = [
       mockCombo,
       {
         id: "combo-2",
-        titulo: "Combo Individual",
-        descripcion: null,
-        precio_usd: 29.99,
-        imagen_url: null,
-        disponible: true,
+        title: "Combo Individual",
+        description: null,
+        price_usd: 29.99,
+        image_url: null,
+        available: true,
         created_at: "2026-01-01",
         updated_at: "2026-06-01",
       },
@@ -81,9 +81,9 @@ describe("getActiveCombos", () => {
 
     expect(Array.isArray(result)).toBe(true);
     expect(result).toHaveLength(2);
-    expect(result[0].titulo).toBe("Combo Familiar");
-    expect(result[0].precio_usd).toBe(49.99);
-    expect(result[0].disponible).toBe(true);
+    expect(result[0].title).toBe("Combo Familiar");
+    expect(result[0].price_usd).toBe(49.99);
+    expect(result[0].available).toBe(true);
   });
 
   it("retorna array vacío cuando hay error", async () => {
@@ -107,11 +107,11 @@ describe("getAllCombos", () => {
       mockCombo,
       {
         id: "combo-3",
-        titulo: "Combo Antiguo",
-        descripcion: null,
-        precio_usd: 19.99,
-        imagen_url: null,
-        disponible: false,
+        title: "Combo Antiguo",
+        description: null,
+        price_usd: 19.99,
+        image_url: null,
+        available: false,
         created_at: "2025-01-01",
         updated_at: "2025-06-01",
       },
@@ -140,14 +140,14 @@ describe("createCombo", () => {
     jest.clearAllMocks();
   });
 
-  it("crea un combo y lo retorna con campos en español", async () => {
+  it("crea un combo y lo retorna con campos en inglés", async () => {
     const newCombo: Combo = {
       id: "combo-new",
-      titulo: "Nuevo Combo",
-      descripcion: "Descripción del combo",
-      precio_usd: 39.99,
-      imagen_url: null,
-      disponible: true,
+      title: "Nuevo Combo",
+      description: "Descripción del combo",
+      price_usd: 39.99,
+      image_url: null,
+      available: true,
       created_at: "2026-06-05",
       updated_at: "2026-06-05",
     };
@@ -155,25 +155,25 @@ describe("createCombo", () => {
     mockSelect.mockReturnValue({ single: mockSingle });
 
     const result = await createCombo({
-      titulo: "Nuevo Combo",
-      descripcion: "Descripción del combo",
-      precio_usd: 39.99,
+      title: "Nuevo Combo",
+      description: "Descripción del combo",
+      price_usd: 39.99,
     });
 
     expect(result).not.toBeNull();
-    expect(result!.titulo).toBe("Nuevo Combo");
-    expect(result!.precio_usd).toBe(39.99);
-    expect(result!.disponible).toBe(true);
+    expect(result!.title).toBe("Nuevo Combo");
+    expect(result!.price_usd).toBe(39.99);
+    expect(result!.available).toBe(true);
   });
 
   it("crea un combo sin descripción ni imagen", async () => {
     const newCombo: Combo = {
       id: "combo-min",
-      titulo: "Combo Mínimo",
-      descripcion: null,
-      precio_usd: 9.99,
-      imagen_url: null,
-      disponible: true,
+      title: "Combo Mínimo",
+      description: null,
+      price_usd: 9.99,
+      image_url: null,
+      available: true,
       created_at: "2026-06-05",
       updated_at: "2026-06-05",
     };
@@ -181,14 +181,14 @@ describe("createCombo", () => {
     mockSelect.mockReturnValue({ single: mockSingle });
 
     const result = await createCombo({
-      titulo: "Combo Mínimo",
-      precio_usd: 9.99,
+      title: "Combo Mínimo",
+      price_usd: 9.99,
     });
 
     expect(result).not.toBeNull();
-    expect(result!.titulo).toBe("Combo Mínimo");
-    expect(result!.descripcion).toBeNull();
-    expect(result!.imagen_url).toBeNull();
+    expect(result!.title).toBe("Combo Mínimo");
+    expect(result!.description).toBeNull();
+    expect(result!.image_url).toBeNull();
   });
 
   it("retorna null cuando hay error al crear", async () => {
@@ -196,7 +196,7 @@ describe("createCombo", () => {
     mockSingle.mockResolvedValue({ data: null, error: { message: "Error" } });
     mockSelect.mockReturnValue({ single: mockSingle });
 
-    const result = await createCombo({ titulo: "Fallo", precio_usd: 0 });
+    const result = await createCombo({ title: "Fallo", price_usd: 0 });
 
     expect(result).toBeNull();
     consoleSpy.mockRestore();
@@ -211,23 +211,23 @@ describe("updateCombo", () => {
   it("actualiza un combo y lo retorna", async () => {
     const updated: Combo = {
       ...mockCombo,
-      titulo: "Combo Actualizado",
-      precio_usd: 59.99,
-      disponible: false,
+      title: "Combo Actualizado",
+      price_usd: 59.99,
+      available: false,
     };
     mockSingle.mockResolvedValue({ data: updated, error: null });
     mockSelect.mockReturnValue({ single: mockSingle });
 
     const result = await updateCombo("combo-1", {
-      titulo: "Combo Actualizado",
-      precio_usd: 59.99,
-      disponible: false,
+      title: "Combo Actualizado",
+      price_usd: 59.99,
+      available: false,
     });
 
     expect(result).not.toBeNull();
-    expect(result!.titulo).toBe("Combo Actualizado");
-    expect(result!.precio_usd).toBe(59.99);
-    expect(result!.disponible).toBe(false);
+    expect(result!.title).toBe("Combo Actualizado");
+    expect(result!.price_usd).toBe(59.99);
+    expect(result!.available).toBe(false);
   });
 
   it("retorna null cuando hay error al actualizar", async () => {
@@ -235,7 +235,7 @@ describe("updateCombo", () => {
     mockSingle.mockResolvedValue({ data: null, error: { message: "Not found" } });
     mockSelect.mockReturnValue({ single: mockSingle });
 
-    const result = await updateCombo("combo-999", { titulo: "Nope" });
+    const result = await updateCombo("combo-999", { title: "Nope" });
 
     expect(result).toBeNull();
     consoleSpy.mockRestore();

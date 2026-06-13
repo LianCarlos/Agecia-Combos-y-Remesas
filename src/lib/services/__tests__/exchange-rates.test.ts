@@ -1,22 +1,62 @@
-import { getExchangeRates, calculateReceivingAmount } from "../exchange-rates";
-import type { RateDisplay } from "@/types";
+// ─── Mock next/cache antes de cualquier import del servicio ──────
+jest.mock("next/cache", () => ({
+  unstable_cache: (fn: (...args: unknown[]) => unknown) => fn,
+  revalidateTag: jest.fn(),
+  revalidatePath: jest.fn(),
+}));
+
+// ─── Mock del cliente Supabase admin ──────────────────────────────
+jest.mock("@/lib/supabase/admin", () => ({
+  supabaseAdmin: {
+    from: jest.fn(() => ({
+      select: jest.fn(() => ({
+        order: jest.fn().mockResolvedValue({ data: null, error: null }),
+      })),
+    })),
+  },
+}));
 
 // ─── Mock del cliente Supabase server ─────────────────────────────
-const mockSelectChain = {
-  eq: jest.fn().mockReturnThis(),
-  order: jest.fn().mockResolvedValue({ data: null, error: null }),
-  maybeSingle: jest.fn().mockResolvedValue({ data: null, error: null }),
-};
-
 jest.mock("@/lib/supabase/server", () => ({
   createClient: jest.fn(() =>
     Promise.resolve({
       from: jest.fn(() => ({
-        select: jest.fn(() => mockSelectChain),
+        select: jest.fn(() => ({
+          eq: jest.fn().mockReturnThis(),
+          order: jest.fn().mockResolvedValue({ data: null, error: null }),
+          maybeSingle: jest.fn().mockResolvedValue({ data: null, error: null }),
+        })),
       })),
     })
   ),
 }));
+
+import { getExchangeRates, calculateReceivingAmount } from "../exchange-rates";
+import type { RateDisplay } from "@/types";
+
+// Helpers para acceder a los mocks en cada test
+function getAdminOrderMock() {
+  const { supabaseAdmin } = require("@/lib/supabase/admin");
+  const mockSelect = jest.fn(() => ({ order: jest.fn().mockResolvedValue({ data: null, error: null }) }));
+  const mockOrder = jest.fn().mockResolvedValue({ data: null, error: null });
+  mockSelect.mockReturnValue({ order: mockOrder });
+  supabaseAdmin.from.mockReturnValue({ select: mockSelect });
+  return mockOrder;
+}
+
+function getServerMocks() {
+  const { createClient } = require("@/lib/supabase/server");
+  const mockMaybeSingle = jest.fn().mockResolvedValue({ data: null, error: null });
+  const mockSelectChain = {
+    eq: jest.fn().mockReturnThis(),
+    order: jest.fn().mockResolvedValue({ data: null, error: null }),
+    maybeSingle: mockMaybeSingle,
+  };
+  createClient.mockResolvedValue({
+    from: jest.fn(() => ({ select: jest.fn(() => mockSelectChain) })),
+  });
+  return { mockMaybeSingle, mockSelectChain };
+}
 
 describe("getExchangeRates", () => {
   beforeEach(() => {
@@ -24,7 +64,8 @@ describe("getExchangeRates", () => {
   });
 
   it("retorna array de RateDisplay cuando hay datos válidos", async () => {
-    mockSelectChain.order.mockResolvedValueOnce({
+    const mockOrder = getAdminOrderMock();
+    mockOrder.mockResolvedValueOnce({
       data: [
         {
           payment_method_id: "pm-1",
@@ -53,7 +94,8 @@ describe("getExchangeRates", () => {
   });
 
   it("retorna la estructura RateDisplay correcta", async () => {
-    mockSelectChain.order.mockResolvedValueOnce({
+    const mockOrder = getAdminOrderMock();
+    mockOrder.mockResolvedValueOnce({
       data: [
         {
           payment_method_id: "pm-1",
@@ -81,7 +123,8 @@ describe("getExchangeRates", () => {
   });
 
   it("usa valores por defecto cuando faltan datos anidados", async () => {
-    mockSelectChain.order.mockResolvedValueOnce({
+    const mockOrder = getAdminOrderMock();
+    mockOrder.mockResolvedValueOnce({
       data: [
         {
           payment_method_id: "pm-3",
@@ -105,7 +148,8 @@ describe("getExchangeRates", () => {
 
   it("retorna array vacío cuando hay error de Supabase", async () => {
     const consoleSpy = jest.spyOn(console, "error").mockImplementation(() => {});
-    mockSelectChain.order.mockResolvedValueOnce({
+    const mockOrder = getAdminOrderMock();
+    mockOrder.mockResolvedValueOnce({
       data: null,
       error: { message: "Database error" },
     });
@@ -124,10 +168,8 @@ describe("calculateReceivingAmount", () => {
   });
 
   it("retorna null para combinación inexistente", async () => {
-    mockSelectChain.maybeSingle.mockResolvedValueOnce({
-      data: null,
-      error: null,
-    });
+    const { mockMaybeSingle } = getServerMocks();
+    mockMaybeSingle.mockResolvedValueOnce({ data: null, error: null });
 
     const result = await calculateReceivingAmount({
       paymentMethodId: "pm-nonexistent",
@@ -139,7 +181,8 @@ describe("calculateReceivingAmount", () => {
   });
 
   it("retorna resultado correcto para combinación válida", async () => {
-    mockSelectChain.maybeSingle.mockResolvedValueOnce({
+    const { mockMaybeSingle } = getServerMocks();
+    mockMaybeSingle.mockResolvedValueOnce({
       data: {
         rate: 97.5,
         payment_methods: { name: "Zelle" },
@@ -162,7 +205,8 @@ describe("calculateReceivingAmount", () => {
   });
 
   it("retorna null cuando Supabase devuelve error", async () => {
-    mockSelectChain.maybeSingle.mockResolvedValueOnce({
+    const { mockMaybeSingle } = getServerMocks();
+    mockMaybeSingle.mockResolvedValueOnce({
       data: null,
       error: { message: "Error de conexión" },
     });

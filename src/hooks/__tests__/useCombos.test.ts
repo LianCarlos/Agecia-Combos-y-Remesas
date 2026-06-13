@@ -11,25 +11,25 @@ global.fetch = mockFetch;
 import { renderHook, act } from "@testing-library/react";
 import { useCombos } from "../useCombos";
 
-// ─── Fixtures (campos en español: titulo, descripcion, precio_usd, imagen_url, disponible) ──
+// ─── Fixtures (campos en inglés: title, description, price_usd, image_url, available) ──
 const mockCombosData = [
   {
     id: "combo-1",
-    titulo: "Combo Familiar",
-    descripcion: "Para toda la familia",
-    precio_usd: 49.99,
-    imagen_url: null,
-    disponible: true,
+    title: "Combo Familiar",
+    description: "Para toda la familia",
+    price_usd: 49.99,
+    image_url: null,
+    available: true,
     created_at: "2026-01-01",
     updated_at: "2026-06-01",
   },
   {
     id: "combo-2",
-    titulo: "Combo Individual",
-    descripcion: "Para una persona",
-    precio_usd: 29.99,
-    imagen_url: null,
-    disponible: true,
+    title: "Combo Individual",
+    description: "Para una persona",
+    price_usd: 29.99,
+    image_url: null,
+    available: true,
     created_at: "2026-01-01",
     updated_at: "2026-06-01",
   },
@@ -71,7 +71,7 @@ describe("useCombos", () => {
     expect(result.current.error).toBeNull();
   });
 
-  it("fetch exitoso retorna combos con campos en español", async () => {
+  it("fetch exitoso retorna combos con campos en inglés", async () => {
     mockFetch.mockResolvedValueOnce({
       ok: true,
       json: async () => mockCombosData,
@@ -83,11 +83,11 @@ describe("useCombos", () => {
       await new Promise((r) => setTimeout(r, 0));
     });
 
-    expect(result.current.combos[0].titulo).toBe("Combo Familiar");
-    expect(result.current.combos[0].descripcion).toBe("Para toda la familia");
-    expect(result.current.combos[0].precio_usd).toBe(49.99);
-    expect(result.current.combos[0].imagen_url).toBeNull();
-    expect(result.current.combos[0].disponible).toBe(true);
+    expect(result.current.combos[0].title).toBe("Combo Familiar");
+    expect(result.current.combos[0].description).toBe("Para toda la familia");
+    expect(result.current.combos[0].price_usd).toBe(49.99);
+    expect(result.current.combos[0].image_url).toBeNull();
+    expect(result.current.combos[0].available).toBe(true);
   });
 
   it("fetch fallido (response no ok) setea error y loading=false", async () => {

@@ -17,13 +17,13 @@ import { useRemittanceCalculator } from "../useRemittanceCalculator";
 
 // ─── Fixtures ─────────────────────────────────────────────────────
 const mockPaymentMethods = [
-  { id: "pm-1", name: "Zelle", is_active: true, created_at: "2026-01-01" },
-  { id: "pm-2", name: "Western Union", is_active: true, created_at: "2026-01-01" },
+  { id: "pm-1", name: "Zelle", active: true, currency_id: null, created_at: "2026-01-01" },
+  { id: "pm-2", name: "Western Union", active: true, currency_id: null, created_at: "2026-01-01" },
 ];
 
 const mockDeliveryMethods = [
-  { id: "dm-1", name: "Efectivo USD", is_active: true, created_at: "2026-01-01" },
-  { id: "dm-2", name: "Transferencia Bancaria", is_active: true, created_at: "2026-01-01" },
+  { id: "dm-1", name: "Efectivo USD", active: true, created_at: "2026-01-01" },
+  { id: "dm-2", name: "Transferencia Bancaria", active: true, created_at: "2026-01-01" },
 ];
 
 const mockExchangeResult = {
