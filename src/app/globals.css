@@ -1,0 +1,619 @@
+@import "tailwindcss";
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   MR FACTUS · DESIGN SYSTEM 2026
+   Fintech + Calidez Tropical Cubana
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+/* ─── Design Tokens ─── */
+@theme {
+  --color-brand-green: #006847;
+  --color-brand-green-light: #008a5e;
+  --color-brand-green-dark: #004d33;
+  --color-brand-green-bg: #e8f5e9;
+  --color-brand-green-surface: #f0f7f4;
+  --color-brand-red: #CE1126;
+  --color-brand-red-light: #e63946;
+  --color-brand-red-dark: #a30f1f;
+  --color-whatsapp: #25D366;
+  --color-whatsapp-dark: #1fb855;
+  --color-dark: #0f172a;
+  --color-terminal-bg: #0a1a0f;
+  --color-terminal-green: #00ff88;
+  --color-terminal-green-dim: #00cc6a;
+  --color-surface-light: #f8fafc;
+  --color-text-primary: #0f172a;
+  --color-text-secondary: #475569;
+  --color-text-muted: #94a3b8;
+
+  --font-sans: "Inter", system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  --font-mono: "JetBrains Mono", "Fira Code", ui-monospace, SFMono-Regular, monospace;
+
+  --breakpoint-xs: 400px;
+}
+
+/* ─── CSS Variables for runtime use ─── */
+:root {
+  --background: #f0f7f4;
+  --foreground: #0f172a;
+  --brand-green: #006847;
+  --brand-green-light: #008a5e;
+  --brand-green-dark: #004d33;
+  --brand-green-bg: #e8f5e9;
+  --brand-red: #CE1126;
+  --whatsapp: #25D366;
+  --terminal-bg: #0a1a0f;
+  --terminal-green: #00ff88;
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   BASE STYLES
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+html {
+  overflow-x: hidden;
+}
+
+body {
+  overflow-x: hidden;
+  background:
+    /* Patrón geométrico de líneas grid MUY tenues */
+    linear-gradient(rgba(0, 104, 71, 0.018) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(0, 104, 71, 0.018) 1px, transparent 1px),
+    /* Gradiente verde muy claro */
+    linear-gradient(180deg, #e8f5e9 0%, #ffffff 40%, #ffffff 100%);
+  background-size: 48px 48px, 48px 48px, 100% 100%;
+  color: #0f172a;
+  font-family: var(--font-inter, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif);
+  min-height: 100vh;
+  position: relative;
+}
+
+/* ─── Decoraciones orgánicas de fondo ─── */
+body::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 0;
+  background:
+    /* Círculo verde grande arriba-derecha */
+    radial-gradient(ellipse 700px 700px at 95% 0%, rgba(0, 104, 71, 0.04) 0%, transparent 70%),
+    /* Círculo verde sutil abajo-izquierda */
+    radial-gradient(ellipse 500px 500px at 5% 95%, rgba(0, 77, 51, 0.03) 0%, transparent 70%),
+    /* Acento rojo mínimo en el centro */
+    radial-gradient(ellipse 250px 250px at 50% 40%, rgba(206, 17, 38, 0.01) 0%, transparent 70%);
+  opacity: 1;
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   CUSTOM UTILITY CLASSES — Identidad Mr Factus
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+/* ─── Card Premium: borde verde sutil (1px border-brand-green/15), sombra, rounded-2xl ─── */
+.card-premium {
+  @apply rounded-2xl border border-brand-green/[0.15] bg-white;
+  box-shadow:
+    0 1px 2px rgba(0, 104, 71, 0.04),
+    0 4px 16px rgba(0, 104, 71, 0.06),
+    0 8px 32px rgba(0, 0, 0, 0.04);
+  transition: box-shadow 0.3s ease, transform 0.3s ease;
+}
+.card-premium:hover {
+  box-shadow:
+    0 1px 2px rgba(0, 104, 71, 0.06),
+    0 8px 24px rgba(0, 104, 71, 0.1),
+    0 16px 48px rgba(0, 0, 0, 0.06);
+}
+
+/* ─── Card Glass (mantenida por compatibilidad) ─── */
+.card-glass {
+  @apply rounded-2xl border border-white/30 bg-white/70 shadow-lg backdrop-blur-xl;
+}
+
+/* ─── Card Rate: estilo terminal Bloomberg para panel de tasas ─── */
+.card-rate {
+  @apply rounded-xl border border-terminal-green/20 font-mono;
+  background: linear-gradient(180deg, #0a1a0f 0%, #0d1f12 100%);
+  color: #00ff88;
+  box-shadow:
+    inset 0 1px 0 rgba(0, 255, 136, 0.05),
+    0 4px 24px rgba(0, 0, 0, 0.4);
+}
+
+/* ─── Botón CTA con gradiente verde (mantenido por compatibilidad) ─── */
+.btn-cta {
+  @apply inline-flex items-center justify-center gap-2 rounded-xl px-6 py-3.5 text-sm font-semibold text-white;
+  background: linear-gradient(135deg, #006847 0%, #008a5e 50%, #006847 100%);
+  background-size: 200% 200%;
+  box-shadow: 0 2px 8px rgba(0, 104, 71, 0.3), 0 1px 2px rgba(0, 104, 71, 0.2);
+  transition: all 0.3s ease;
+  animation: gradientShift 4s ease infinite;
+}
+.btn-cta:hover {
+  box-shadow: 0 4px 16px rgba(0, 104, 71, 0.4), 0 2px 4px rgba(0, 104, 71, 0.3);
+  transform: translateY(-1px);
+}
+.btn-cta:active {
+  transform: scale(0.98);
+}
+.btn-cta:disabled {
+  @apply cursor-not-allowed opacity-50;
+  animation: none;
+  transform: none;
+}
+
+/* ─── btn-primary: fondo brand-green, hover brand-green-dark, blanco, rounded-xl, px-6 py-3, semibold, sombra, transición ─── */
+.btn-primary {
+  @apply inline-flex items-center justify-center gap-2 rounded-xl px-6 py-3 text-sm font-semibold text-white;
+  background-color: #006847;
+  box-shadow: 0 2px 8px rgba(0, 104, 71, 0.3), 0 1px 2px rgba(0, 104, 71, 0.15);
+  transition: all 0.3s ease;
+}
+.btn-primary:hover {
+  background-color: #004d33;
+  box-shadow: 0 4px 16px rgba(0, 104, 71, 0.4), 0 2px 4px rgba(0, 104, 71, 0.25);
+  transform: translateY(-1px);
+}
+.btn-primary:active {
+  transform: scale(0.98);
+}
+.btn-primary:disabled {
+  @apply cursor-not-allowed opacity-50;
+  transform: none;
+}
+
+/* ─── btn-whatsapp: fondo #25D366, hover más oscuro, texto blanco ─── */
+.btn-whatsapp {
+  @apply inline-flex items-center justify-center gap-2 rounded-xl px-5 py-2.5 text-sm font-semibold text-white;
+  background-color: #25D366;
+  box-shadow: 0 2px 8px rgba(37, 211, 102, 0.3);
+  transition: all 0.3s ease;
+}
+.btn-whatsapp:hover {
+  background-color: #1da851;
+  box-shadow: 0 4px 16px rgba(37, 211, 102, 0.4);
+  transform: translateY(-1px);
+}
+.btn-whatsapp:active {
+  transform: scale(0.98);
+}
+
+/* ─── Botón WhatsApp con pulso (mantenido por compatibilidad) ─── */
+.btn-whatsapp-cta {
+  @apply inline-flex items-center justify-center gap-2 rounded-xl px-6 py-3.5 text-sm font-semibold text-white;
+  background: linear-gradient(135deg, #25D366 0%, #1fb855 100%);
+  box-shadow: 0 2px 8px rgba(37, 211, 102, 0.3);
+  transition: all 0.3s ease;
+  position: relative;
+}
+.btn-whatsapp-cta:hover {
+  box-shadow: 0 4px 20px rgba(37, 211, 102, 0.45);
+  transform: translateY(-1px);
+}
+.btn-whatsapp-cta:active {
+  transform: scale(0.98);
+}
+.btn-whatsapp-cta::after {
+  content: "";
+  position: absolute;
+  inset: -4px;
+  border-radius: 16px;
+  border: 2px solid rgba(37, 211, 102, 0.4);
+  animation: whatsappPulse 2s ease-in-out infinite;
+  pointer-events: none;
+}
+
+/* ─── btn-outline: borde brand-green, texto brand-green, hover bg-brand-green hover:text-white ─── */
+.btn-outline {
+  @apply inline-flex items-center justify-center gap-2 rounded-xl border-2 px-5 py-2.5 text-sm font-semibold;
+  border-color: #006847;
+  color: #006847;
+  background: transparent;
+  transition: all 0.3s ease;
+}
+.btn-outline:hover {
+  background-color: #006847;
+  color: #ffffff;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 16px rgba(0, 104, 71, 0.25);
+}
+.btn-outline:active {
+  transform: scale(0.98);
+}
+
+/* ─── Input Modern: borde inferior solamente, estilo material minimal ─── */
+.input-modern {
+  @apply w-full border-0 border-b-2 border-slate-200 bg-transparent px-1 py-3 text-sm text-slate-800 outline-none transition-all;
+  font-family: var(--font-inter, system-ui, sans-serif);
+}
+.input-modern::placeholder {
+  @apply text-slate-400;
+}
+.input-modern:focus {
+  border-bottom-color: #006847;
+  box-shadow: 0 2px 0 -1px #006847;
+}
+.input-modern-error {
+  @apply w-full border-0 border-b-2 border-brand-red/60 bg-transparent px-1 py-3 text-sm text-slate-800 outline-none transition-all;
+}
+.input-modern-error:focus {
+  border-bottom-color: #CE1126;
+  box-shadow: 0 2px 0 -1px #CE1126;
+}
+
+/* ─── input-mr: borde inferior solamente (estilo material), fondo transparente, focus:border-brand-green ─── */
+.input-mr {
+  @apply w-full border-0 border-b-2 border-slate-200 bg-transparent px-1 py-3 text-sm text-slate-800 outline-none transition-all placeholder:text-slate-400;
+  font-family: var(--font-inter, system-ui, sans-serif);
+}
+.input-mr:focus {
+  border-bottom-color: #006847;
+  box-shadow: 0 2px 0 -1px #006847;
+}
+.input-mr-icon {
+  @apply w-full border-0 border-b-2 border-slate-200 bg-transparent py-3 pl-10 pr-1 text-sm text-slate-800 outline-none transition-all placeholder:text-slate-400;
+  font-family: var(--font-inter, system-ui, sans-serif);
+}
+.input-mr-icon:focus {
+  border-bottom-color: #006847;
+  box-shadow: 0 2px 0 -1px #006847;
+}
+
+/* ─── Badge de disponibilidad ─── */
+.badge-available {
+  @apply inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-semibold;
+  background-color: rgba(0, 104, 71, 0.1);
+  color: #006847;
+}
+.badge-unavailable {
+  @apply inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-semibold;
+  background-color: #f1f5f9;
+  color: #64748b;
+}
+
+/* ─── Chip de precio flotante ─── */
+.chip-price {
+  @apply inline-flex items-center rounded-full bg-white/90 px-3 py-1.5 text-sm font-extrabold text-brand-green shadow-lg backdrop-blur-sm;
+}
+
+/* ─── Sección con gradiente verde oscuro (para resultados) ─── */
+.section-result {
+  background: linear-gradient(160deg, #004d33 0%, #006847 40%, #003d26 100%);
+  @apply rounded-2xl p-6 text-white;
+  box-shadow:
+    0 4px 24px rgba(0, 77, 51, 0.3),
+    inset 0 1px 0 rgba(255, 255, 255, 0.1);
+  position: relative;
+  overflow: hidden;
+}
+.section-result::before {
+  content: "";
+  position: absolute;
+  top: -50%;
+  left: -50%;
+  width: 200%;
+  height: 200%;
+  background: radial-gradient(ellipse at 30% 20%, rgba(0, 255, 136, 0.08) 0%, transparent 60%);
+  pointer-events: none;
+}
+
+/* ─── Dot pulsante "EN VIVO" ─── */
+.live-dot {
+  @apply relative inline-flex h-2.5 w-2.5;
+}
+.live-dot::before {
+  content: "";
+  @apply absolute inset-0 rounded-full bg-[#00ff88];
+  animation: livePing 2s cubic-bezier(0, 0, 0.2, 1) infinite;
+}
+.live-dot::after {
+  content: "";
+  @apply relative inline-flex h-2.5 w-2.5 rounded-full bg-[#00ff88];
+  box-shadow: 0 0 8px rgba(0, 255, 136, 0.6);
+}
+
+/* ─── pulse-dot: punto pulsante genérico ─── */
+.pulse-dot {
+  @apply relative inline-flex h-2.5 w-2.5;
+}
+.pulse-dot::before {
+  content: "";
+  @apply absolute inset-0 rounded-full bg-current;
+  animation: livePing 2s cubic-bezier(0, 0, 0.2, 1) infinite;
+}
+.pulse-dot::after {
+  content: "";
+  @apply relative inline-flex h-2.5 w-2.5 rounded-full bg-current;
+}
+
+/* ─── Section title ─── */
+.section-title {
+  @apply text-2xl font-bold tracking-tight text-slate-800 sm:text-3xl;
+}
+.section-subtitle {
+  @apply text-sm text-slate-500;
+}
+
+/* ─── Section icon container ─── */
+.section-icon {
+  @apply mx-auto flex h-14 w-14 items-center justify-center rounded-2xl;
+  background: linear-gradient(135deg, rgba(0, 104, 71, 0.1) 0%, rgba(0, 104, 71, 0.05) 100%);
+  box-shadow: 0 2px 8px rgba(0, 104, 71, 0.08);
+}
+
+/* ─── Geo pattern for placeholder images ─── */
+.geo-placeholder {
+  background:
+    linear-gradient(135deg, rgba(0, 104, 71, 0.06) 25%, transparent 25%),
+    linear-gradient(225deg, rgba(0, 104, 71, 0.06) 25%, transparent 25%),
+    linear-gradient(315deg, rgba(0, 104, 71, 0.04) 25%, transparent 25%),
+    linear-gradient(45deg, rgba(0, 104, 71, 0.04) 25%, transparent 25%);
+  background-size: 20px 20px;
+  background-color: #f0f7f4;
+}
+
+/* ─── Decorative patterns ─── */
+.geo-dots {
+  background-image: radial-gradient(rgba(0, 104, 71, 0.08) 1px, transparent 1px);
+  background-size: 24px 24px;
+}
+.geo-grid {
+  background-image:
+    linear-gradient(rgba(0, 104, 71, 0.04) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(0, 104, 71, 0.04) 1px, transparent 1px);
+  background-size: 40px 40px;
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   HERO · Impacto fintech premium (dark emerald)
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+.hero-section {
+  background:
+    radial-gradient(55% 50% at 85% -5%, rgba(0, 255, 136, 0.18) 0%, transparent 60%),
+    radial-gradient(50% 45% at 5% 105%, rgba(16, 185, 129, 0.22) 0%, transparent 55%),
+    radial-gradient(45% 40% at 50% 118%, rgba(0, 255, 136, 0.12) 0%, transparent 60%),
+    linear-gradient(165deg, #02281b 0%, #054e36 48%, #02261a 100%);
+}
+
+/* Cuadrícula sutil con desvanecido radial (estilo dashboard fintech) */
+.hero-grid-pattern {
+  background-image:
+    linear-gradient(rgba(255, 255, 255, 0.08) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255, 255, 255, 0.08) 1px, transparent 1px);
+  background-size: 44px 44px;
+  -webkit-mask-image: radial-gradient(ellipse 75% 65% at 50% 22%, #000 0%, transparent 78%);
+  mask-image: radial-gradient(ellipse 75% 65% at 50% 22%, #000 0%, transparent 78%);
+}
+
+/* Viñeta inferior para un corte limpio hacia la sección clara */
+.hero-fade {
+  background: linear-gradient(180deg, transparent 0%, rgba(2, 30, 20, 0.55) 100%);
+}
+
+/* Eyebrow / corredor: pastilla de vidrio */
+.hero-badge {
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  background: rgba(255, 255, 255, 0.08);
+  -webkit-backdrop-filter: blur(8px);
+  backdrop-filter: blur(8px);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.1);
+}
+
+/* Texto de acento con gradiente y brillo sutil */
+.hero-accent {
+  background: linear-gradient(90deg, #5eead4 0%, #6ee7b7 50%, #a7f3d0 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  filter: drop-shadow(0 0 24px rgba(94, 234, 212, 0.25));
+}
+
+/* CTA primario: pastilla blanca, alto contraste sobre verde oscuro */
+.hero-cta-primary {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  border-radius: 0.875rem;
+  padding: 0.875rem 1.75rem;
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: #044d34;
+  background: #ffffff;
+  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.25), 0 2px 8px rgba(0, 255, 136, 0.15);
+  transition: transform 0.25s ease, box-shadow 0.25s ease;
+}
+.hero-cta-primary:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 14px 40px rgba(0, 0, 0, 0.3), 0 4px 14px rgba(0, 255, 136, 0.28);
+}
+.hero-cta-primary:active {
+  transform: scale(0.98);
+}
+
+/* CTA secundario: vidrio con borde */
+.hero-cta-ghost {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  border-radius: 0.875rem;
+  padding: 0.875rem 1.5rem;
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: #ecfdf5;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  background: rgba(255, 255, 255, 0.06);
+  -webkit-backdrop-filter: blur(8px);
+  backdrop-filter: blur(8px);
+  transition: transform 0.25s ease, background 0.25s ease, border-color 0.25s ease;
+}
+.hero-cta-ghost:hover {
+  background: rgba(255, 255, 255, 0.12);
+  border-color: rgba(255, 255, 255, 0.35);
+  transform: translateY(-2px);
+}
+.hero-cta-ghost:active {
+  transform: scale(0.98);
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   ANIMATIONS
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+@keyframes gradientShift {
+  0%, 100% { background-position: 0% 50%; }
+  50% { background-position: 100% 50%; }
+}
+
+@keyframes livePing {
+  0% { transform: scale(1); opacity: 1; }
+  75%, 100% { transform: scale(2.2); opacity: 0; }
+}
+
+@keyframes whatsappPulse {
+  0%, 100% { opacity: 0.6; transform: scale(1); }
+  50% { opacity: 0; transform: scale(1.06); }
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(16px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes slideUp {
+  from {
+    opacity: 0;
+    transform: translateY(24px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes slideInRight {
+  from { transform: translateX(100%); }
+  to { transform: translateX(0); }
+}
+
+@keyframes scanline {
+  0% { transform: translateY(-100%); }
+  100% { transform: translateY(100%); }
+}
+
+@keyframes numberPop {
+  0% { transform: scale(0.8); opacity: 0; }
+  60% { transform: scale(1.05); }
+  100% { transform: scale(1); opacity: 1; }
+}
+
+@keyframes shimmer {
+  0% { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+
+/* ─── Animation utility classes ─── */
+.animate-fade-in {
+  animation: fadeIn 0.4s ease-out forwards;
+}
+.animate-fade-in-up {
+  animation: fadeInUp 0.6s ease-out forwards;
+}
+.animate-slide-up {
+  animation: slideUp 0.5s ease-out forwards;
+}
+.animate-number-pop {
+  animation: numberPop 0.5s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+}
+
+/* ─── Scanline effect para panel de tasas ─── */
+.scanline-overlay {
+  position: relative;
+  overflow: hidden;
+}
+.scanline-overlay::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    180deg,
+    transparent 0%,
+    rgba(0, 255, 136, 0.015) 50%,
+    transparent 100%
+  );
+  animation: scanline 8s linear infinite;
+  pointer-events: none;
+}
+
+/* ─── Hide scrollbar utility ─── */
+.scrollbar-hide {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+.scrollbar-hide::-webkit-scrollbar {
+  display: none;
+}
+
+/* ─── Skeleton loading shimmer ─── */
+.skeleton-shimmer {
+  background: linear-gradient(90deg, #e8f5e9 25%, #f0f7f4 50%, #e8f5e9 75%);
+  background-size: 200% 100%;
+  animation: shimmer 1.5s ease-in-out infinite;
+}
+
+/* ─── Connector line (para CheckoutForm sender → beneficiary) ─── */
+.connector-line {
+  position: relative;
+}
+.connector-line::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 50%;
+  width: 2px;
+  background: linear-gradient(180deg, #006847 0%, #008a5e 50%, #004d33 100%);
+  transform: translateX(-50%);
+  border-radius: 1px;
+}
+
+/* ─── Hover zoom for images ─── */
+.hover-zoom {
+  overflow: hidden;
+}
+.hover-zoom img {
+  transition: transform 0.7s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+}
+.hover-zoom:hover img {
+  transform: scale(1.08);
+}
+
+/* ─── Mobile slide panel ─── */
+.mobile-slide-panel {
+  animation: slideInRight 0.3s cubic-bezier(0.25, 0.46, 0.45, 0.94) forwards;
+}
+
+@keyframes gradient-shift {
+  0% { background-position: 0% 50%; }
+  50% { background-position: 100% 50%; }
+  100% { background-position: 0% 50%; }
+}
+
+.animate-gradient {
+  background-size: 200% 200%;
+  animation: gradient-shift 8s ease infinite;
+}

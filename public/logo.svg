@@ -1,0 +1,17 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 80" fill="none">
+  <!-- Icono MF -->
+  <rect x="0" y="0" width="80" height="80" rx="18" fill="#003366"/>
+  <text x="40" y="40" text-anchor="middle" dominant-baseline="middle"
+        font-family="'Inter', system-ui, sans-serif" font-weight="800"
+        font-size="48" fill="#16A34A">MF</text>
+  
+  <!-- Texto MrFactus -->
+  <text x="94" y="38" font-family="'Inter', system-ui, sans-serif"
+        font-weight="700" font-size="28" fill="#003366">Mr</text>
+  <text x="148" y="38" font-family="'Inter', system-ui, sans-serif"
+        font-weight="700" font-size="28" fill="#16A34A">Factus</text>
+  
+  <!-- Subtítulo -->
+  <text x="94" y="58" font-family="'Inter', system-ui, sans-serif"
+        font-weight="500" font-size="12" fill="#64748B">REMESAS INTERNACIONALES</text>
+</svg>
