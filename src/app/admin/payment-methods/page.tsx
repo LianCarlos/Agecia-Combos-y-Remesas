@@ -93,14 +93,17 @@ export default function PaymentMethodsPage() {
           currency_id: formCurrencyId || null,
         }),
       });
-      if (!res.ok) throw new Error('Error al guardar');
+      if (!res.ok) {
+        const body = await res.json().catch(() => null);
+        throw new Error(body?.error || `Error ${res.status} al guardar`);
+      }
       setShowForm(false);
       setEditingId(null);
       setFormName('');
       setFormCurrencyId('');
       fetchAll();
     } catch (e: unknown) {
-      alert(e instanceof Error ? e.message : 'Error');
+      alert(e instanceof Error ? e.message : 'Error desconocido');
     } finally {
       setSaving(false);
     }

@@ -158,6 +158,7 @@ export function DeliveryMethodsManager({
   const [modalOpen, setModalOpen] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [formName, setFormName] = useState('');
+  const [formRequiresBankData, setFormRequiresBankData] = useState(false);
 
   // Confirm dialog
   const [deleteTarget, setDeleteTarget] = useState<DeliveryMethod | null>(null);
@@ -196,12 +197,14 @@ export function DeliveryMethodsManager({
   function openCreateModal() {
     setEditingId(null);
     setFormName('');
+    setFormRequiresBankData(false);
     setModalOpen(true);
   }
 
   function openEditModal(method: DeliveryMethod) {
     setEditingId(method.id);
     setFormName(method.name);
+    setFormRequiresBankData(method.type === 'transfer' || method.type === 'card');
     setModalOpen(true);
   }
 
@@ -209,6 +212,7 @@ export function DeliveryMethodsManager({
     setModalOpen(false);
     setEditingId(null);
     setFormName('');
+    setFormRequiresBankData(false);
   }
 
   /* ─── Save ─── */
@@ -223,7 +227,8 @@ export function DeliveryMethodsManager({
         ? `/api/admin/delivery-methods/${editingId}`
         : '/api/admin/delivery-methods';
       const method = isEdit ? 'PUT' : 'POST';
-      const body = isEdit ? { name: formName.trim() } : { name: formName.trim() };
+      const methodType = formRequiresBankData ? 'transfer' : 'cash';
+      const body = isEdit ? { name: formName.trim(), type: methodType } : { name: formName.trim(), type: methodType };
 
       const res = await fetch(url, {
         method,
@@ -269,7 +274,7 @@ export function DeliveryMethodsManager({
           'Content-Type': 'application/json',
           Authorization: `Bearer ${adminToken}`,
         },
-        body: JSON.stringify({ is_active: !method.active }),
+        body: JSON.stringify({ active: !method.active }),
       });
 
       if (!res.ok) throw new Error('Error al actualizar');
@@ -343,7 +348,9 @@ export function DeliveryMethodsManager({
             open={modalOpen}
             editing={!!editingId}
             name={formName}
+            requiresBankData={formRequiresBankData}
             onNameChange={setFormName}
+            onRequiresBankDataChange={setFormRequiresBankData}
             onSave={handleSave}
             onClose={closeModal}
             saving={saving}
@@ -392,9 +399,16 @@ export function DeliveryMethodsManager({
                 <span className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-lg bg-brand-red/10 text-sm">
                   🚚
                 </span>
-                <span className="text-sm font-medium text-slate-700">
-                  {method.name}
-                </span>
+                <div className="flex flex-col">
+                  <span className="text-sm font-medium text-slate-700">
+                    {method.name}
+                  </span>
+                  {(method.type === 'transfer' || method.type === 'card') && (
+                    <span className="mt-0.5 inline-flex w-fit items-center gap-1 rounded-full bg-amber-100 px-2 py-0.5 text-xs font-medium text-amber-700">
+                      💳 Datos bancarios
+                    </span>
+                  )}
+                </div>
               </div>
 
               {/* Status Toggle */}
@@ -455,7 +469,9 @@ export function DeliveryMethodsManager({
           open={modalOpen}
           editing={!!editingId}
           name={formName}
+          requiresBankData={formRequiresBankData}
           onNameChange={setFormName}
+          onRequiresBankDataChange={setFormRequiresBankData}
           onSave={handleSave}
           onClose={closeModal}
           saving={saving}
@@ -490,7 +506,9 @@ function MethodModal({
   open,
   editing,
   name,
+  requiresBankData,
   onNameChange,
+  onRequiresBankDataChange,
   onSave,
   onClose,
   saving,
@@ -498,7 +516,9 @@ function MethodModal({
   open: boolean;
   editing: boolean;
   name: string;
+  requiresBankData: boolean;
   onNameChange: (v: string) => void;
+  onRequiresBankDataChange: (v: boolean) => void;
   onSave: () => void;
   onClose: () => void;
   saving: boolean;
@@ -530,13 +550,38 @@ function MethodModal({
           value={name}
           onChange={(e) => onNameChange(e.target.value)}
           placeholder="Ej: Efectivo, Recogida en tienda..."
-          className="input-mr mb-6"
+          className="input-mr mb-5"
           autoFocus
           onKeyDown={(e) => {
             if (e.key === 'Enter') onSave();
             if (e.key === 'Escape') onClose();
           }}
         />
+
+        {/* Bank data toggle */}
+        <div className="mb-6 flex items-start gap-3 rounded-xl border border-slate-200 bg-slate-50 p-4">
+          <button
+            type="button"
+            onClick={() => onRequiresBankDataChange(!requiresBankData)}
+            className={`relative mt-0.5 inline-flex h-6 w-11 flex-shrink-0 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-amber-400/40 ${
+              requiresBankData ? 'bg-amber-500' : 'bg-slate-300'
+            }`}
+            role="switch"
+            aria-checked={requiresBankData}
+          >
+            <span
+              className={`inline-block h-4 w-4 rounded-full bg-white shadow-sm transition-transform ${
+                requiresBankData ? 'translate-x-6' : 'translate-x-1'
+              }`}
+            />
+          </button>
+          <div>
+            <p className="text-sm font-medium text-slate-700">Requiere datos bancarios</p>
+            <p className="mt-0.5 text-xs text-slate-400">
+              Al activar, en el pedido se pedirá número de tarjeta y teléfono de confirmación.
+            </p>
+          </div>
+        </div>
 
         <div className="flex justify-end gap-3">
           <button

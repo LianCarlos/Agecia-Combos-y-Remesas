@@ -53,8 +53,8 @@ describe("getActiveDeliveryMethods", () => {
 
   it("retorna array de métodos de entrega activos", async () => {
     const mockData: DeliveryMethod[] = [
-      { id: "dm-1", name: "Efectivo USD", is_active: true, created_at: "2026-01-01" },
-      { id: "dm-2", name: "Transferencia Bancaria", is_active: true, created_at: "2026-01-01" },
+      { id: "dm-1", name: "Efectivo USD", active: true, type: 'cash', created_at: "2026-01-01" },
+      { id: "dm-2", name: "Transferencia Bancaria", active: true, type: 'transfer', created_at: "2026-01-01" },
     ];
     setupSelectChain({ data: mockData, error: null });
 
@@ -83,8 +83,8 @@ describe("getAllDeliveryMethods", () => {
 
   it("retorna todos los métodos de entrega", async () => {
     const mockData: DeliveryMethod[] = [
-      { id: "dm-1", name: "Efectivo USD", is_active: true, created_at: "2026-01-01" },
-      { id: "dm-2", name: "Transferencia Bancaria", is_active: false, created_at: "2026-01-01" },
+      { id: "dm-1", name: "Efectivo USD", active: true, type: 'cash', created_at: "2026-01-01" },
+      { id: "dm-2", name: "Transferencia Bancaria", active: false, type: 'transfer', created_at: "2026-01-01" },
     ];
     setupSelectAllChain({ data: mockData, error: null });
 
@@ -114,7 +114,8 @@ describe("createDeliveryMethod", () => {
     const newMethod: DeliveryMethod = {
       id: "dm-new",
       name: "MLC",
-      is_active: true,
+      active: true,
+      type: 'cash',
       created_at: "2026-06-05",
     };
     mockSingle.mockResolvedValue({ data: newMethod, error: null });
@@ -124,7 +125,7 @@ describe("createDeliveryMethod", () => {
 
     expect(result).not.toBeNull();
     expect(result!.name).toBe("MLC");
-    expect(result!.is_active).toBe(true);
+    expect(result!.active).toBe(true);
   });
 
   it("retorna null cuando hay error al crear", async () => {
@@ -148,7 +149,8 @@ describe("updateDeliveryMethod", () => {
     const updated: DeliveryMethod = {
       id: "dm-1",
       name: "Efectivo USD Actualizado",
-      is_active: false,
+      active: false,
+      type: 'cash',
       created_at: "2026-01-01",
     };
     mockSingle.mockResolvedValue({ data: updated, error: null });
@@ -158,7 +160,7 @@ describe("updateDeliveryMethod", () => {
 
     expect(result).not.toBeNull();
     expect(result!.name).toBe("Efectivo USD Actualizado");
-    expect(result!.is_active).toBe(false);
+    expect(result!.active).toBe(false);
   });
 
   it("retorna null cuando hay error al actualizar", async () => {

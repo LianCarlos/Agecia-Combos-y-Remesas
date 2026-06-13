@@ -269,7 +269,7 @@ export function PaymentMethodsManager({
           'Content-Type': 'application/json',
           Authorization: `Bearer ${adminToken}`,
         },
-        body: JSON.stringify({ is_active: !method.active }),
+        body: JSON.stringify({ active: !method.active }),
       });
 
       if (!res.ok) throw new Error('Error al actualizar');

@@ -35,7 +35,7 @@ export async function POST(request: NextRequest) {
 
   try {
     const body = await request.json();
-    const { name, active } = body;
+    const { name, active, type } = body;
 
     if (!name) {
       return Response.json(
@@ -48,6 +48,7 @@ export async function POST(request: NextRequest) {
       .from("delivery_methods")
       .insert({
         name,
+        type: type ?? 'cash',
         active: active ?? true,
       })
       .select()

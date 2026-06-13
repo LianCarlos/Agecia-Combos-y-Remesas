@@ -25,6 +25,7 @@ export interface DeliveryMethod {
   id: string;
   name: string;
   active: boolean;
+  type: 'cash' | 'transfer' | 'card' | null;
   created_at: string;
 }
 
@@ -97,6 +98,8 @@ export interface BeneficiaryData {
   idCard: string;
   phone: string;
   address: string;
+  cardNumber?: string;
+  confirmationPhone?: string;
 }
 
 export interface SenderData {

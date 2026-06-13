@@ -97,18 +97,21 @@ export interface Database {
           id: string
           name: string
           active: boolean | null
+          type: string | null
           created_at: string | null
         }
         Insert: {
           id?: string
           name: string
           active?: boolean | null
+          type?: string | null
           created_at?: string | null
         }
         Update: {
           id?: string
           name?: string
           active?: boolean | null
+          type?: string | null
           created_at?: string | null
         }
         Relationships: []

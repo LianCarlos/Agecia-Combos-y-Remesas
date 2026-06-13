@@ -119,6 +119,32 @@ export async function updateWhatsappPhone(phone: string) {
   return { success: true };
 }
 
+export async function resetEmployeePassword(employeeId: string, newPassword: string) {
+  const userId = await getCurrentUserId();
+  if (!userId) return { success: false, error: 'No autenticado' };
+
+  const { data: profile } = await supabaseAdmin
+    .from('profiles')
+    .select('role')
+    .eq('id', userId)
+    .single();
+
+  if (!profile || profile.role !== 'superadmin') {
+    return { success: false, error: 'No autorizado' };
+  }
+
+  if (!newPassword || newPassword.trim().length < 6) {
+    return { success: false, error: 'La contraseña debe tener al menos 6 caracteres' };
+  }
+
+  const { error } = await serviceClient.auth.admin.updateUserById(employeeId, {
+    password: newPassword.trim(),
+  });
+
+  if (error) return { success: false, error: error.message };
+  return { success: true };
+}
+
 export async function revokeEmployeeAccess(employeeId: string) {
   const userId = await getCurrentUserId();
   if (!userId) return { success: false, error: 'No autenticado' };

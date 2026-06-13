@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
-import { createEmployee, revokeEmployeeAccess, updateSuperadminProfile, getWhatsappPhone, updateWhatsappPhone } from '@/lib/actions/employees';
+import { createEmployee, revokeEmployeeAccess, updateSuperadminProfile, resetEmployeePassword, getWhatsappPhone, updateWhatsappPhone } from '@/lib/actions/employees';
 
 interface Profile {
   id: string;
@@ -27,6 +27,9 @@ export default function EmployeesPage() {
   const [whatsappPhone, setWhatsappPhone] = useState('');
   const [whatsappSaving, setWhatsappSaving] = useState(false);
   const [whatsappMessage, setWhatsappMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
+  const [resetTarget, setResetTarget] = useState<Profile | null>(null);
+  const [resetPassword, setResetPassword] = useState('');
+  const [resetSaving, setResetSaving] = useState(false);
 
   const fetchProfiles = useCallback(async () => {
     setLoading(true);
@@ -136,11 +139,39 @@ export default function EmployeesPage() {
     }
   }
 
+  async function handleResetPassword(e: React.FormEvent) {
+    e.preventDefault();
+    if (!resetTarget || !resetPassword.trim()) return;
+    setResetSaving(true);
+    setActionMessage(null);
+    try {
+      const result = await resetEmployeePassword(resetTarget.id, resetPassword.trim());
+      if (result.success) {
+        setActionMessage({ type: 'success', text: `Contraseña de ${resetTarget.full_name || resetTarget.email} actualizada` });
+        setResetTarget(null);
+        setResetPassword('');
+      } else {
+        setActionMessage({ type: 'error', text: result.error || 'Error al actualizar contraseña' });
+      }
+    } catch (e: any) {
+      setActionMessage({ type: 'error', text: e.message });
+    } finally {
+      setResetSaving(false);
+    }
+  }
+
   function generatePassword() {
     const chars = 'ABCDEFGHJKMNPQRSTUVWXYZabcdefghjkmnpqrstuvwxyz23456789!@#$';
     let pw = '';
     for (let i = 0; i < 12; i++) pw += chars.charAt(Math.floor(Math.random() * chars.length));
     setForm({ ...form, password: pw });
+  }
+
+  function generateResetPassword() {
+    const chars = 'ABCDEFGHJKMNPQRSTUVWXYZabcdefghjkmnpqrstuvwxyz23456789!@#$';
+    let pw = '';
+    for (let i = 0; i < 12; i++) pw += chars.charAt(Math.floor(Math.random() * chars.length));
+    setResetPassword(pw);
   }
 
   const thClass = 'px-4 py-3 text-left text-[11px] font-semibold uppercase tracking-wider text-slate-500';
@@ -233,6 +264,43 @@ export default function EmployeesPage() {
         </div>
       )}
 
+      {/* Reset employee password modal */}
+      {resetTarget && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm p-4">
+          <form onSubmit={handleResetPassword} className="w-full max-w-md rounded-2xl bg-white p-6 shadow-xl">
+            <h2 className="mb-1 text-lg font-bold text-slate-900">Cambiar Contraseña</h2>
+            <p className="mb-4 text-sm text-slate-500">
+              Cambia la contraseña de <strong>{resetTarget.full_name || resetTarget.email}</strong>.
+            </p>
+            <div>
+              <label className="block text-sm font-medium text-slate-700 mb-1">Nueva contraseña</label>
+              <div className="flex gap-2">
+                <input
+                  type="text"
+                  value={resetPassword}
+                  onChange={e => setResetPassword(e.target.value)}
+                  className="flex-1 rounded-xl border border-slate-300 px-4 py-3 text-sm font-mono focus:border-brand-green focus:ring-2 focus:ring-brand-green/20 outline-none transition"
+                  placeholder="Mínimo 6 caracteres"
+                  required
+                  minLength={6}
+                />
+                <button type="button" onClick={generateResetPassword} className="rounded-xl bg-slate-100 px-3 py-2 text-xs font-semibold text-slate-600 hover:bg-slate-200 transition whitespace-nowrap">
+                  🎲 Generar
+                </button>
+              </div>
+            </div>
+            <div className="mt-5 flex gap-3 justify-end">
+              <button type="button" onClick={() => { setResetTarget(null); setResetPassword(''); }} className="rounded-xl px-4 py-2.5 text-sm font-semibold text-slate-600 hover:bg-slate-100 transition">
+                Cancelar
+              </button>
+              <button type="submit" disabled={resetSaving || resetPassword.trim().length < 6} className="rounded-xl bg-brand-green px-5 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-emerald-700 disabled:opacity-50 transition">
+                {resetSaving ? 'Guardando...' : 'Actualizar'}
+              </button>
+            </div>
+          </form>
+        </div>
+      )}
+
       {showForm && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm p-4">
           <form onSubmit={handleCreate} className="w-full max-w-md rounded-2xl bg-white p-6 shadow-xl">
@@ -299,21 +367,31 @@ export default function EmployeesPage() {
                     </span>
                   </td>
                   <td className={tdClass + ' text-right'}>
-                    {p.role === 'superadmin' ? (
-                      <button
-                        onClick={() => openEditSuperadmin(p)}
-                        className="rounded-lg px-3 py-1.5 text-xs font-semibold text-slate-600 hover:bg-slate-100 transition"
-                      >
-                        Editar
-                      </button>
-                    ) : (
-                      <button
-                        onClick={() => handleRevoke(p.id, p.full_name || p.email)}
-                        className="rounded-lg px-3 py-1.5 text-xs font-semibold text-red-600 hover:bg-red-50 transition"
-                      >
-                        Revocar Acceso
-                      </button>
-                    )}
+                    <div className="flex items-center justify-end gap-1">
+                      {p.role === 'superadmin' ? (
+                        <button
+                          onClick={() => openEditSuperadmin(p)}
+                          className="rounded-lg px-3 py-1.5 text-xs font-semibold text-slate-600 hover:bg-slate-100 transition"
+                        >
+                          Editar
+                        </button>
+                      ) : (
+                        <>
+                          <button
+                            onClick={() => { setResetTarget(p); setResetPassword(''); setActionMessage(null); }}
+                            className="rounded-lg px-3 py-1.5 text-xs font-semibold text-slate-600 hover:bg-slate-100 transition"
+                          >
+                            Contraseña
+                          </button>
+                          <button
+                            onClick={() => handleRevoke(p.id, p.full_name || p.email)}
+                            className="rounded-lg px-3 py-1.5 text-xs font-semibold text-red-600 hover:bg-red-50 transition"
+                          >
+                            Revocar
+                          </button>
+                        </>
+                      )}
+                    </div>
                   </td>
                 </tr>
               ))}

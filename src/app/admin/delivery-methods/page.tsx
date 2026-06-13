@@ -6,6 +6,7 @@ interface DeliveryMethod {
   id: string;
   name: string;
   active: boolean;
+  type: 'cash' | 'transfer' | 'card' | null;
 }
 
 export default function DeliveryMethodsPage() {
@@ -15,6 +16,7 @@ export default function DeliveryMethodsPage() {
   const [showForm, setShowForm] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [formName, setFormName] = useState('');
+  const [formRequiresBankData, setFormRequiresBankData] = useState(false);
   const [saving, setSaving] = useState(false);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [bulkDeleting, setBulkDeleting] = useState(false);
@@ -75,15 +77,20 @@ export default function DeliveryMethodsPage() {
         ? `/api/admin/delivery-methods/${editingId}`
         : '/api/admin/delivery-methods';
       const method = editingId ? 'PUT' : 'POST';
+      const type = formRequiresBankData ? 'transfer' : 'cash';
       const res = await fetch(url, {
         method,
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ name: formName.trim() }),
+        body: JSON.stringify({ name: formName.trim(), type }),
       });
-      if (!res.ok) throw new Error('Error al guardar');
+      if (!res.ok) {
+        const body = await res.json().catch(() => null);
+        throw new Error(body?.error || `Error ${res.status}`);
+      }
       setShowForm(false);
       setEditingId(null);
       setFormName('');
+      setFormRequiresBankData(false);
       fetchMethods();
     } catch (e: unknown) {
       alert(e instanceof Error ? e.message : 'Error');
@@ -97,7 +104,7 @@ export default function DeliveryMethodsPage() {
       const res = await fetch(`/api/admin/delivery-methods/${m.id}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ name: m.name, active: !m.active }),
+        body: JSON.stringify({ active: !m.active }),
       });
       if (!res.ok) throw new Error('Error');
       fetchMethods();
@@ -120,8 +127,18 @@ export default function DeliveryMethodsPage() {
   function openEdit(m: DeliveryMethod) {
     setEditingId(m.id);
     setFormName(m.name);
+    setFormRequiresBankData(m.type === 'transfer' || m.type === 'card');
     setShowForm(true);
   }
+
+  function openNew() {
+    setEditingId(null);
+    setFormName('');
+    setFormRequiresBankData(false);
+    setShowForm(true);
+  }
+
+  const requiresBankData = (m: DeliveryMethod) => m.type === 'transfer' || m.type === 'card';
 
   const thClass = 'px-4 py-3 text-left text-[11px] font-semibold uppercase tracking-wider text-slate-500';
   const tdClass = 'px-4 py-3 text-sm text-slate-700';
@@ -156,7 +173,7 @@ export default function DeliveryMethodsPage() {
           <p className="mt-1 text-sm text-slate-500">Gestiona las vías de entrega en Cuba</p>
         </div>
         <button
-          onClick={() => { setShowForm(true); setEditingId(null); setFormName(''); }}
+          onClick={openNew}
           className="inline-flex items-center gap-2 rounded-xl bg-brand-green px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition-all hover:bg-emerald-700 active:scale-95"
         >
           <span className="text-lg leading-none">+</span> Agregar Método
@@ -169,15 +186,61 @@ export default function DeliveryMethodsPage() {
             <h2 className="mb-4 text-lg font-bold text-slate-900">
               {editingId ? 'Editar Método' : 'Nuevo Método de Entrega'}
             </h2>
-            <label className="block text-sm font-medium text-slate-700 mb-1">Nombre</label>
-            <input
-              value={formName}
-              onChange={e => setFormName(e.target.value)}
-              className="w-full rounded-xl border border-slate-300 px-4 py-3 text-sm focus:border-brand-green focus:ring-2 focus:ring-brand-green/20 outline-none transition"
-              placeholder="Ej: CUP Efectivo, MLC Transferencia..."
-              autoFocus
-              required
-            />
+
+            <div className="space-y-4">
+              {/* Nombre */}
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-1">Nombre</label>
+                <input
+                  value={formName}
+                  onChange={e => setFormName(e.target.value)}
+                  className="w-full rounded-xl border border-slate-300 px-4 py-3 text-sm focus:border-brand-green focus:ring-2 focus:ring-brand-green/20 outline-none transition"
+                  placeholder="Ej: CUP Efectivo, MLC Transferencia..."
+                  autoFocus
+                  required
+                />
+              </div>
+
+              {/* Tipo: requiere datos bancarios */}
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-2">
+                  Tipo de entrega
+                </label>
+                <div className="grid grid-cols-2 gap-3">
+                  <button
+                    type="button"
+                    onClick={() => setFormRequiresBankData(false)}
+                    className={`flex flex-col items-center gap-2 rounded-xl border-2 p-4 text-sm font-medium transition-all ${
+                      !formRequiresBankData
+                        ? 'border-brand-green bg-emerald-50 text-brand-green'
+                        : 'border-slate-200 text-slate-500 hover:border-slate-300'
+                    }`}
+                  >
+                    <span className="text-2xl">💵</span>
+                    <span>Efectivo</span>
+                    <span className="text-[11px] font-normal text-slate-400 text-center leading-tight">
+                      No pide datos bancarios
+                    </span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setFormRequiresBankData(true)}
+                    className={`flex flex-col items-center gap-2 rounded-xl border-2 p-4 text-sm font-medium transition-all ${
+                      formRequiresBankData
+                        ? 'border-amber-500 bg-amber-50 text-amber-700'
+                        : 'border-slate-200 text-slate-500 hover:border-slate-300'
+                    }`}
+                  >
+                    <span className="text-2xl">💳</span>
+                    <span>Transferencia</span>
+                    <span className="text-[11px] font-normal text-slate-400 text-center leading-tight">
+                      Pide tarjeta y teléfono
+                    </span>
+                  </button>
+                </div>
+              </div>
+            </div>
+
             <div className="mt-5 flex gap-3 justify-end">
               <button
                 type="button"
@@ -218,6 +281,7 @@ export default function DeliveryMethodsPage() {
                   />
                 </th>
                 <th className={thClass}>Nombre</th>
+                <th className={thClass}>Tipo</th>
                 <th className={thClass}>Estado</th>
                 <th className={thClass + ' text-right'}>Acciones</th>
               </tr>
@@ -234,6 +298,17 @@ export default function DeliveryMethodsPage() {
                     />
                   </td>
                   <td className={tdClass + ' font-medium'}>{m.name}</td>
+                  <td className={tdClass}>
+                    {requiresBankData(m) ? (
+                      <span className="inline-flex items-center gap-1.5 rounded-full bg-amber-100 px-2.5 py-1 text-xs font-semibold text-amber-700">
+                        💳 Transferencia
+                      </span>
+                    ) : (
+                      <span className="inline-flex items-center gap-1.5 rounded-full bg-slate-100 px-2.5 py-1 text-xs font-semibold text-slate-500">
+                        💵 Efectivo
+                      </span>
+                    )}
+                  </td>
                   <td className={tdClass}>
                     <button
                       onClick={() => toggleActive(m)}

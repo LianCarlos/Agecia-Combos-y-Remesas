@@ -35,7 +35,7 @@ export async function POST(request: NextRequest) {
 
   try {
     const body = await request.json();
-    const { name, active } = body;
+    const { name, active, currency_id } = body;
 
     if (!name) {
       return Response.json(
@@ -49,6 +49,7 @@ export async function POST(request: NextRequest) {
       .insert({
         name,
         active: active ?? true,
+        ...(currency_id !== undefined ? { currency_id: currency_id || null } : {}),
       })
       .select()
       .single();

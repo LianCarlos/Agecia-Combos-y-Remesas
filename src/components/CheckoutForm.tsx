@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRemittanceCalculator } from "@/hooks/useRemittanceCalculator";
 import { generateWhatsAppOrderUrl } from "@/lib/utils/whatsapp";
 import type {
@@ -116,12 +116,21 @@ export function CheckoutForm() {
     originCurrency,
     amount,
     receivingAmount,
+    rateMultiplier,
+    calculate,
     selectPaymentMethod,
     selectDeliveryMethod,
     setOriginCountry,
     setOriginCurrency,
     setAmount,
   } = useRemittanceCalculator();
+
+  // Auto-calcular tasa cuando todos los campos necesarios están completos
+  useEffect(() => {
+    if (selectedPaymentMethod && selectedDeliveryMethod && amount > 0 && originCountry) {
+      calculate();
+    }
+  }, [selectedPaymentMethod, selectedDeliveryMethod, amount, originCountry, calculate]);
 
   const [sender, setSender] = useState<SenderData>({
     fullName: "",
@@ -137,6 +146,18 @@ export function CheckoutForm() {
   });
   const [fieldErrors, setFieldErrors] = useState<FieldErrors>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [adminPhone, setAdminPhone] = useState<string | undefined>(undefined);
+
+  useEffect(() => {
+    fetch("/api/settings?key=whatsapp_phone")
+      .then((r) => r.json())
+      .then((d) => { if (d.value) setAdminPhone(d.value); })
+      .catch(() => {});
+  }, []);
+
+  const requiresBankData =
+    selectedDeliveryMethod?.type === "transfer" ||
+    selectedDeliveryMethod?.type === "card";
 
   function handleCountrySelect(val: string) {
     setSelectedCountryId(val);
@@ -183,6 +204,8 @@ export function CheckoutForm() {
     if (!beneficiary.idCard.trim()) errors.idCard = true;
     if (!beneficiary.phone.trim()) errors.phone = true;
     if (!beneficiary.address.trim()) errors.address = true;
+    if (requiresBankData && !beneficiary.cardNumber?.trim()) errors.cardNumber = true;
+    if (requiresBankData && !beneficiary.confirmationPhone?.trim()) errors.confirmationPhone = true;
 
     setFieldErrors(errors);
     return Object.keys(errors).length === 0;
@@ -206,10 +229,16 @@ export function CheckoutForm() {
         idCard: beneficiary.idCard.trim(),
         phone: beneficiary.phone.trim(),
         address: beneficiary.address.trim(),
+        ...(requiresBankData && beneficiary.cardNumber?.trim()
+          ? { cardNumber: beneficiary.cardNumber.trim() }
+          : {}),
+        ...(requiresBankData && beneficiary.confirmationPhone?.trim()
+          ? { confirmationPhone: beneficiary.confirmationPhone.trim() }
+          : {}),
       },
       remittance: selectedPaymentMethod && selectedDeliveryMethod && amount > 0
         ? {
-            rateMultiplier: 0,
+            rateMultiplier: rateMultiplier ?? 0,
             receivingAmount: receivingAmount ?? 0,
             originAmount: amount,
             originCountry,
@@ -218,12 +247,10 @@ export function CheckoutForm() {
             deliveryMethod: selectedDeliveryMethod.name,
           }
         : undefined,
-      orderDate: new Date().toLocaleString("es-CU", {
-        timeZone: "America/Havana",
-      }),
+      orderDate: new Date().toISOString(),
     };
 
-    const url = generateWhatsAppOrderUrl(orderData);
+    const url = generateWhatsAppOrderUrl(orderData, adminPhone);
     window.open(url, "_blank", "noopener,noreferrer");
 
     setIsSubmitting(false);
@@ -622,6 +649,78 @@ export function CheckoutForm() {
                         </p>
                       )}
                     </div>
+
+                    {/* Datos bancarios — solo si el método de entrega los requiere */}
+                    {requiresBankData && (
+                      <>
+                        <div className="flex items-center gap-2 pt-1">
+                          <div className="h-px flex-1 bg-amber-200" />
+                          <span className="text-[10px] font-bold uppercase tracking-widest text-amber-600">
+                            💳 Datos de transferencia
+                          </span>
+                          <div className="h-px flex-1 bg-amber-200" />
+                        </div>
+
+                        {/* Número de tarjeta */}
+                        <div>
+                          <label htmlFor="beneficiary-card" className="mb-1.5 block text-sm font-semibold text-slate-700">
+                            Número de tarjeta *
+                          </label>
+                          <div className="relative">
+                            <span className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-amber-400">
+                              <IconCreditCard className="h-4.5 w-4.5" />
+                            </span>
+                            <input
+                              id="beneficiary-card"
+                              type="text"
+                              inputMode="numeric"
+                              required
+                              value={beneficiary.cardNumber ?? ""}
+                              onChange={(e) => handleBeneficiaryChange("cardNumber", e.target.value)}
+                              placeholder="Ej: 9204 1234 5678 9012"
+                              className={inputClass("cardNumber")}
+                            />
+                          </div>
+                          {fieldErrors.cardNumber && (
+                            <p className="mt-1.5 flex items-center gap-1.5 text-xs font-semibold text-red-600">
+                              <svg className="h-3.5 w-3.5" fill="currentColor" viewBox="0 0 20 20" aria-hidden="true">
+                                <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-8-5a.75.75 0 01.75.75v4.5a.75.75 0 01-1.5 0v-4.5A.75.75 0 0110 5zm0 10a1 1 0 100-2 1 1 0 000 2z" clipRule="evenodd" />
+                              </svg>
+                              Campo obligatorio
+                            </p>
+                          )}
+                        </div>
+
+                        {/* Teléfono de confirmación */}
+                        <div>
+                          <label htmlFor="beneficiary-confirm-phone" className="mb-1.5 block text-sm font-semibold text-slate-700">
+                            Teléfono de confirmación *
+                          </label>
+                          <div className="relative">
+                            <span className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-amber-400">
+                              <IconPhone className="h-4.5 w-4.5" />
+                            </span>
+                            <input
+                              id="beneficiary-confirm-phone"
+                              type="tel"
+                              required
+                              value={beneficiary.confirmationPhone ?? ""}
+                              onChange={(e) => handleBeneficiaryChange("confirmationPhone", e.target.value)}
+                              placeholder="+53 5 123 4567"
+                              className={inputClass("confirmationPhone")}
+                            />
+                          </div>
+                          {fieldErrors.confirmationPhone && (
+                            <p className="mt-1.5 flex items-center gap-1.5 text-xs font-semibold text-red-600">
+                              <svg className="h-3.5 w-3.5" fill="currentColor" viewBox="0 0 20 20" aria-hidden="true">
+                                <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-8-5a.75.75 0 01.75.75v4.5a.75.75 0 01-1.5 0v-4.5A.75.75 0 0110 5zm0 10a1 1 0 100-2 1 1 0 000 2z" clipRule="evenodd" />
+                              </svg>
+                              Campo obligatorio
+                            </p>
+                          )}
+                        </div>
+                      </>
+                    )}
                   </div>
                 </fieldset>
               </div>

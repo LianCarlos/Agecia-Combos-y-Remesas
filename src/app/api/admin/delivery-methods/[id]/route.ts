@@ -14,11 +14,12 @@ export async function PUT(
 
   try {
     const body = await request.json();
-    const { name, active } = body;
+    const { name, active, type } = body;
 
     const updateData: Record<string, unknown> = {};
     if (name !== undefined) updateData.name = name;
     if (active !== undefined) updateData.active = active;
+    if (type !== undefined) updateData.type = type;
 
     const { data, error } = await supabaseAdmin
       .from("delivery_methods")
