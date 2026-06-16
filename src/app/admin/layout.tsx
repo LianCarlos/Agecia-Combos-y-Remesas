@@ -3,6 +3,8 @@ import { redirect } from 'next/navigation';
 import { getCurrentUserAndProfile } from '@/lib/auth';
 import { AdminShell } from './components/AdminShell';
 
+export const dynamic = 'force-dynamic';
+
 export const metadata = {
   title: 'Mr Factus · Panel de Administración',
   description: 'Panel de administración de la plataforma Mr Factus',
