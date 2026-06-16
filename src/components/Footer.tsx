@@ -1,6 +1,7 @@
-export function Footer() {
+export function Footer({ whatsappPhone }: { whatsappPhone?: string }) {
+  const waUrl = `https://wa.me/${whatsappPhone ?? "5355555555"}`;
   const enlaces = [
-    { href: "#combos", label: "Combos" },
+    { href: "#combos", label: "Combos y Productos" },
     { href: "#calcular", label: "Calcular Remesa" },
     { href: "#tasas", label: "Tasas de Cambio" },
   ];
@@ -71,7 +72,7 @@ export function Footer() {
             </p>
             {/* Botón WhatsApp pequeño */}
             <a
-              href="https://wa.me/5355555555"
+              href={waUrl}
               target="_blank"
               rel="noopener noreferrer"
               className="mt-5 inline-flex items-center gap-1.5 rounded-lg px-4 py-2 text-xs font-semibold text-white transition-all duration-300 hover:scale-105 hover:shadow-lg"
@@ -131,7 +132,7 @@ export function Footer() {
             <ul className="mt-5 space-y-4">
               <li>
                 <a
-                  href="https://wa.me/5355555555"
+                  href={waUrl}
                   target="_blank"
                   rel="noopener noreferrer"
                   className="inline-flex items-center gap-2.5 text-sm text-slate-400 transition-colors duration-200 hover:text-[#25D366]"

@@ -1,57 +1,17 @@
 "use client";
 
 import { useState } from "react";
+import { convertToPaymentCurrency } from "@/lib/utils/currency-convert";
+import { useAppData } from "@/components/AppDataProvider";
+import type { MobileRecharge, RateInfo, PMInfo, CupRate } from "@/types";
 
 /* ═══════════════════════════════════════════════════════════════════════════
    TYPES
    ═══════════════════════════════════════════════════════════════════════════ */
 
-export interface RecargaItem {
-  id: string;
-  title: string;
-  description: string | null;
-  price_usd: number;
-  image_url: string | null;
-}
-
-export interface CupRate {
-  paymentMethod: string;
-  deliveryMethod: string;
-  rate: number;
-}
-
-interface RateInfo {
-  paymentMethodId: string;
-  deliveryMethodId: string;
-  deliveryMethod: string;
-  currencyCode: string;
-  currencySymbol: string;
-  rate: number;
-}
-
-interface PMInfo {
-  id: string;
-  name: string;
-  active: boolean;
-}
-
-function convertToPaymentCurrency(
-  priceUSD: number,
-  pmId: string,
-  rates: RateInfo[]
-): { amount: number; code: string; symbol: string } | null {
-  const pmRates = rates.filter(r => r.paymentMethodId === pmId);
-  if (!pmRates.length) return null;
-  const { currencyCode, currencySymbol } = pmRates[0];
-  if (currencyCode === "USD") return { amount: priceUSD, code: "USD", symbol: "$" };
-  const usdDel = pmRates.find(r => r.deliveryMethod.toLowerCase().includes("usd"));
-  if (usdDel?.rate) return { amount: priceUSD / usdDel.rate, code: currencyCode, symbol: currencySymbol };
-  const myCup = pmRates.find(r => r.deliveryMethod.toLowerCase().includes("cup"));
-  if (!myCup) return null;
-  const usdRef = rates.filter(r => r.currencyCode === "USD").find(r => r.deliveryMethodId === myCup.deliveryMethodId);
-  if (!usdRef?.rate) return null;
-  return { amount: priceUSD * (usdRef.rate / myCup.rate), code: currencyCode, symbol: currencySymbol };
-}
+// La tarjeta de recarga solo usa estos campos del registro de la BD
+export type RecargaItem = Pick<MobileRecharge, "id" | "title" | "description" | "price_usd" | "image_url">;
+export type { CupRate };
 
 /* ═══════════════════════════════════════════════════════════════════════════
    ICONS
@@ -75,9 +35,10 @@ interface RecargaOrderModalProps {
   paymentMethods: PMInfo[];
   rates: RateInfo[];
   loading: boolean;
+  whatsappPhone?: string;
 }
 
-function RecargaOrderModal({ recarga, onClose, paymentMethods, rates, loading }: RecargaOrderModalProps) {
+function RecargaOrderModal({ recarga, onClose, paymentMethods, rates, loading, whatsappPhone }: RecargaOrderModalProps) {
   const [phone, setPhone] = useState("");
   const [pmId, setPMId] = useState("");
 
@@ -108,7 +69,7 @@ function RecargaOrderModal({ recarga, onClose, paymentMethods, rates, loading }:
     ].filter((l): l is string => l !== null);
 
     window.open(
-      `https://wa.me/5355555555?text=${encodeURIComponent(lines.join("\n"))}`,
+      `https://wa.me/${whatsappPhone ?? "5355555555"}?text=${encodeURIComponent(lines.join("\n"))}`,
       "_blank",
       "noopener,noreferrer"
     );
@@ -287,31 +248,18 @@ function RechargeCard({
 export function RecargasUI({
   recharges,
   cupRates,
+  whatsappPhone,
 }: {
   recharges: RecargaItem[];
-  cupRates: { paymentMethod: string; deliveryMethod: string; rate: number }[];
+  cupRates: CupRate[];
+  whatsappPhone?: string;
 }) {
+  // Métodos de pago y tasas precargados desde el servidor vía Context (sin fetch).
+  const { paymentMethodsInfo: paymentMethods, rates } = useAppData();
   const [orderingRecarga, setOrderingRecarga] = useState<RecargaItem | null>(null);
-  const [paymentMethods, setPaymentMethods] = useState<PMInfo[]>([]);
-  const [rates, setRates] = useState<RateInfo[]>([]);
-  const [loadingData, setLoadingData] = useState(false);
 
-  async function openOrder(recarga: RecargaItem) {
+  function openOrder(recarga: RecargaItem) {
     setOrderingRecarga(recarga);
-    if (!paymentMethods.length) {
-      setLoadingData(true);
-      try {
-        const [pmRes, ratesRes] = await Promise.all([
-          fetch("/api/payment-methods").then(r => r.json()),
-          fetch("/api/exchange-rates").then(r => r.json()),
-        ]);
-        setPaymentMethods((pmRes as PMInfo[]).filter(p => p.active));
-        setRates(ratesRes as RateInfo[]);
-      } catch {
-        // modal will show "no hay métodos"
-      }
-      setLoadingData(false);
-    }
   }
 
   return (
@@ -340,7 +288,8 @@ export function RecargasUI({
           onClose={() => setOrderingRecarga(null)}
           paymentMethods={paymentMethods}
           rates={rates}
-          loading={loadingData}
+          loading={false}
+          whatsappPhone={whatsappPhone}
         />
       )}
     </>

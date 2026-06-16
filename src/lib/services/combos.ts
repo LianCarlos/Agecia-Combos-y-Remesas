@@ -2,6 +2,7 @@ import { createClient } from "@/lib/supabase/server";
 import { cache } from "react";
 import type { Combo } from "@/types";
 
+// Público: se consume client-side vía /api/combos, así que basta dedupe por request.
 export const getActiveCombos = cache(async (): Promise<Combo[]> => {
   const supabase = await createClient();
 

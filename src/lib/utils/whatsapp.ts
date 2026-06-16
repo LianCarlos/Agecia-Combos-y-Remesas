@@ -18,6 +18,19 @@ function formatDate(dateStr: string): string {
   }
 }
 
+function buildSenderSection(orderData: WhatsAppOrderData): string[] {
+  const s = orderData.sender;
+  if (!s || !s.fullName.trim()) return [];
+  return [
+    "",
+    SEP,
+    "EMISOR",
+    `Nombre: ${s.fullName}`,
+    `Telefono: ${s.phone}`,
+    `Pais: ${s.country}`,
+  ];
+}
+
 function buildRemittanceSection(orderData: WhatsAppOrderData): string[] {
   if (!orderData.remittance) return [];
   const r = orderData.remittance;
@@ -53,6 +66,23 @@ function buildComboSection(orderData: WhatsAppOrderData): string[] {
   ];
 }
 
+function buildCartSection(orderData: WhatsAppOrderData): string[] {
+  if (!orderData.cart || orderData.cart.items.length === 0) return [];
+  const { items, total, paymentMethod, payAmountLabel } = orderData.cart;
+  const lines = ["", SEP, "PEDIDO (COMBOS Y PRODUCTOS)"];
+  for (const it of items) {
+    const lineTotal = it.price_usd * it.quantity;
+    const tag = it.kind === "combo" ? "[Combo]" : "[Producto]";
+    lines.push(
+      `- ${it.quantity}x ${tag} ${it.title} — $${it.price_usd.toFixed(2)} c/u = $${lineTotal.toFixed(2)}`
+    );
+  }
+  lines.push(`TOTAL: $${total.toFixed(2)} USD`);
+  if (paymentMethod) lines.push(`Metodo de pago: ${paymentMethod}`);
+  if (payAmountLabel) lines.push(`Monto a pagar: ${payAmountLabel}`);
+  return lines;
+}
+
 export function generateWhatsAppOrderUrl(
   orderData: WhatsAppOrderData,
   adminPhone?: string
@@ -76,18 +106,14 @@ export function generateWhatsAppOrderUrl(
 
   const lines: string[] = [
     "NUEVA SOLICITUD - Mr Factus Remesas",
-    "",
-    SEP,
-    "EMISOR",
-    `Nombre: ${orderData.sender.fullName}`,
-    `Telefono: ${orderData.sender.phone}`,
-    `Pais: ${orderData.sender.country}`,
+    ...buildSenderSection(orderData),
     "",
     SEP,
     "BENEFICIARIO",
     ...beneficiaryLines,
     ...buildRemittanceSection(orderData),
     ...buildComboSection(orderData),
+    ...buildCartSection(orderData),
     "",
     SEP,
     `Fecha: ${formatDate(orderData.orderDate)}`,

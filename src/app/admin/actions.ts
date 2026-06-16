@@ -162,7 +162,7 @@ export async function deleteComboServerAction(id: string): Promise<boolean> {
 /* ─── Profiles (Employees) ─── */
 
 export async function getProfilesServerAction(): Promise<Profile[]> {
-  await requireAdmin();
+  await requireSuperAdmin();
   return getAllProfiles();
 }
 
@@ -177,27 +177,3 @@ export async function updateProfileServerAction(
   return result;
 }
 
-/* ─── Re-export new actions ─── */
-export {
-  getAvailableRatesAction,
-  updateExchangeRateInlineAction,
-  createCurrencyAction,
-  toggleCurrencyAction,
-  deleteCurrencyAction,
-  createPaymentMethodAction,
-  togglePaymentMethodAction,
-  deletePaymentMethodAction,
-  createDeliveryMethodAction,
-  toggleDeliveryMethodAction,
-  deleteDeliveryMethodAction,
-  createComboAction,
-  updateComboAction,
-  toggleComboStatusAction,
-  duplicateComboAction,
-  deleteComboAction,
-  createEmployeeAction,
-  toggleEmployeeAction,
-  getCurrenciesAction,
-  getAllCurrenciesAction,
-  getEmployeesAction,
-} from '@/lib/actions/admin';

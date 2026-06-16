@@ -4,9 +4,19 @@ import { Footer } from "@/components/Footer";
 import { MarketTicker } from "@/components/MarketTicker";
 import { RemittanceCalculator } from "@/components/RemittanceCalculator";
 import { ComboCatalog } from "@/components/ComboCatalog";
+import { ProductsCatalog } from "@/components/ProductsCatalog";
 import { CheckoutForm } from "@/components/CheckoutForm";
 import { RecargasCatalog } from "@/components/RecargasCatalog";
+import { CartProvider } from "@/components/cart/CartProvider";
+import { CartWidget } from "@/components/cart/CartWidget";
+import { Reveal } from "@/components/Reveal";
+import { AppDataProvider } from "@/components/AppDataProvider";
 import { supabaseAdmin } from "@/lib/supabase/admin";
+import { getCalculatorData } from "@/lib/services/calculator";
+import { getActiveCombos } from "@/lib/services/combos";
+import { getActiveProducts } from "@/lib/services/products";
+import { FALLBACK_CALCULATOR_DATA } from "@/lib/fallback-data";
+import type { CalculatorData, PMInfo, RateInfo, Combo, Product } from "@/types";
 
 function MarketTickerSkeleton() {
   return (
@@ -58,17 +68,70 @@ async function getWhatsappPhone(): Promise<string> {
   }
 }
 
+// Precarga de la calculadora en el servidor, con respaldo por-dataset si la BD falla.
+async function getCalcData(): Promise<CalculatorData> {
+  try {
+    const d = await getCalculatorData();
+    return {
+      currencies: d.currencies.length ? d.currencies : FALLBACK_CALCULATOR_DATA.currencies,
+      paymentMethods: d.paymentMethods.length ? d.paymentMethods : FALLBACK_CALCULATOR_DATA.paymentMethods,
+      deliveryMethods: d.deliveryMethods.length ? d.deliveryMethods : FALLBACK_CALCULATOR_DATA.deliveryMethods,
+      exchangeRates: d.exchangeRates,
+    };
+  } catch {
+    return FALLBACK_CALCULATOR_DATA;
+  }
+}
+
+async function getCombos(): Promise<Combo[]> {
+  try {
+    return await getActiveCombos();
+  } catch {
+    return [];
+  }
+}
+
+async function getProducts(): Promise<Product[]> {
+  try {
+    return await getActiveProducts();
+  } catch {
+    return [];
+  }
+}
+
 export default async function Home() {
-  const [originCountries, whatsappPhone] = await Promise.all([
+  const [originCountries, whatsappPhone, calcData, combos, products] = await Promise.all([
     getOriginCountries(),
     getWhatsappPhone(),
+    getCalcData(),
+    getCombos(),
+    getProducts(),
   ]);
+
+  // Datos reducidos para el paso de pago del carrito (sin fetch en cliente)
+  const cartPaymentMethods: PMInfo[] = calcData.paymentMethods
+    .filter((p) => p.active)
+    .map((p) => ({
+      id: p.id,
+      name: p.name,
+      active: p.active,
+      currencies: p.currencies ? { code: p.currencies.code, symbol: p.currencies.symbol } : null,
+    }));
+  const cartRates: RateInfo[] = calcData.exchangeRates.map((r) => ({
+    paymentMethodId: r.paymentMethodId,
+    deliveryMethodId: r.deliveryMethodId,
+    deliveryMethod: r.deliveryMethod,
+    currencyCode: r.currencyCode,
+    currencySymbol: r.currencySymbol,
+    rate: r.rate,
+  }));
 
   return (
     <>
       <Header whatsappPhone={whatsappPhone} />
 
       <main className="min-h-screen">
+       <AppDataProvider data={calcData}>
         {/* ═══════════════════════════════════════════════════════════
             HERO · Impacto fintech premium (dark emerald)
             ═══════════════════════════════════════════════════════════ */}
@@ -153,48 +216,77 @@ export default async function Home() {
         {/* ═══════════════════════════════════════════════════════════
             CALCULADORA DE REMESAS
             ═══════════════════════════════════════════════════════════ */}
-        <section id="calcular" aria-label="Calculadora de remesas" className="bg-slate-50/60">
-          <RemittanceCalculator />
-        </section>
+        <Reveal>
+          <section id="calcular" aria-label="Calculadora de remesas" className="bg-slate-50/60">
+            <RemittanceCalculator />
+          </section>
+        </Reveal>
 
         {/* ═══════════════════════════════════════════════════════════
             SOLICITAR REMESA
             ═══════════════════════════════════════════════════════════ */}
-        <section id="checkout" aria-label="Solicitar remesa">
-          <CheckoutForm />
-        </section>
+        <Reveal>
+          <section id="checkout" aria-label="Solicitar remesa">
+            <CheckoutForm whatsappPhone={whatsappPhone} />
+          </section>
+        </Reveal>
 
         {/* ═══════════════════════════════════════════════════════════
-            CATÁLOGO DE COMBOS
+            COMBOS Y PRODUCTOS (carrito compartido)
             ═══════════════════════════════════════════════════════════ */}
-        <ComboCatalog />
+        <CartProvider whatsappPhone={whatsappPhone} paymentMethods={cartPaymentMethods} rates={cartRates}>
+          <Reveal>
+            <ComboCatalog initialData={combos} />
+          </Reveal>
+
+          {/* Separador entre Combos y Productos */}
+          <div className="mx-auto max-w-6xl px-4 sm:px-6" aria-hidden="true">
+            <div className="flex items-center gap-4">
+              <div className="h-px flex-1 bg-gradient-to-r from-transparent via-slate-200 to-transparent" />
+              <span className="text-[11px] font-bold uppercase tracking-[0.25em] text-slate-300">
+                Productos
+              </span>
+              <div className="h-px flex-1 bg-gradient-to-r from-transparent via-slate-200 to-transparent" />
+            </div>
+          </div>
+
+          <Reveal>
+            <ProductsCatalog initialData={products} />
+          </Reveal>
+          <CartWidget />
+        </CartProvider>
 
         {/* ═══════════════════════════════════════════════════════════
             RECARGAS MÓVILES
             ═══════════════════════════════════════════════════════════ */}
-        <Suspense fallback={null}>
-          <RecargasCatalog />
-        </Suspense>
+        <Reveal>
+          <Suspense fallback={null}>
+            <RecargasCatalog whatsappPhone={whatsappPhone} />
+          </Suspense>
+        </Reveal>
 
         {/* ═══════════════════════════════════════════════════════════
             TASAS DE CAMBIO
             ═══════════════════════════════════════════════════════════ */}
-        <section
-          id="tasas"
-          aria-label="Tasas de cambio en tiempo real"
-          className="mx-auto max-w-2xl px-4 pt-8 pb-16 sm:px-6"
-        >
-          <div className="mb-6 text-center">
-            <h2 className="text-2xl font-bold tracking-tight text-slate-800 sm:text-3xl">Tasas de Cambio</h2>
-            <p className="mt-1 text-sm text-slate-500">Precios actualizados en tiempo real</p>
-          </div>
-          <Suspense fallback={<MarketTickerSkeleton />}>
-            <MarketTicker />
-          </Suspense>
-        </section>
+        <Reveal>
+          <section
+            id="tasas"
+            aria-label="Tasas de cambio en tiempo real"
+            className="mx-auto max-w-2xl px-4 pt-8 pb-16 sm:px-6"
+          >
+            <div className="mb-6 text-center">
+              <h2 className="text-2xl font-bold tracking-tight text-slate-800 sm:text-3xl">Tasas de Cambio</h2>
+              <p className="mt-1 text-sm text-slate-500">Precios actualizados en tiempo real</p>
+            </div>
+            <Suspense fallback={<MarketTickerSkeleton />}>
+              <MarketTicker />
+            </Suspense>
+          </section>
+        </Reveal>
+       </AppDataProvider>
       </main>
 
-      <Footer />
+      <Footer whatsappPhone={whatsappPhone} />
     </>
   );
 }

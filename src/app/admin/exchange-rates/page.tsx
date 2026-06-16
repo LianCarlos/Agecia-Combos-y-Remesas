@@ -1,6 +1,12 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
+import { getRateMatrixServerAction } from '../actions';
+import {
+  getAdminInitDataAction,
+  updateExchangeRateInlineAction,
+  deleteExchangeRateAction,
+} from '@/lib/actions/admin';
 
 interface PaymentMethod { id: string; name: string; active: boolean; }
 interface DeliveryMethod { id: string; name: string; active: boolean; }
@@ -30,13 +36,11 @@ export default function ExchangeRatesPage() {
     setLoading(true);
     setError('');
     try {
-      const [ratesRes, initRes] = await Promise.all([
-        fetch('/api/admin/exchange-rates'),
-        fetch('/api/admin/init'),
+      const [r, init] = await Promise.all([
+        getRateMatrixServerAction(),
+        getAdminInitDataAction(),
       ]);
-      if (!ratesRes.ok || !initRes.ok) throw new Error('Error al cargar datos');
-      const [r, init] = await Promise.all([ratesRes.json(), initRes.json()]);
-      setRates(r);
+      setRates((r ?? []) as unknown as ExchangeRate[]);
       setPaymentMethods(init.paymentMethods ?? []);
       setDeliveryMethods(init.deliveryMethods ?? []);
     } catch (e: unknown) {
@@ -77,9 +81,10 @@ export default function ExchangeRatesPage() {
     if (!confirm(`¿Eliminar ${selectedKeys.size} tasa(s) de cambio seleccionada(s)?`)) return;
     setBulkDeleting(true);
     try {
-      await Promise.all(Array.from(selectedKeys).map(key =>
-        fetch(`/api/admin/exchange-rates/${key}`, { method: 'DELETE' })
-      ));
+      await Promise.all(Array.from(selectedKeys).map(key => {
+        const [pmId, dmId] = key.split(':');
+        return deleteExchangeRateAction(pmId, dmId);
+      }));
       setSelectedKeys(new Set());
       fetchData();
     } catch (e: unknown) {
@@ -97,23 +102,10 @@ export default function ExchangeRatesPage() {
     setSaving(true);
     try {
       if (editingKey) {
-        const res = await fetch(`/api/admin/exchange-rates/${editingKey}`, {
-          method: 'PUT',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ rate: rateNum }),
-        });
-        if (!res.ok) throw new Error('Error al guardar');
+        const [pmId, dmId] = editingKey.split(':');
+        await updateExchangeRateInlineAction(pmId, dmId, rateNum);
       } else {
-        const res = await fetch('/api/admin/exchange-rates', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            payment_method_id: form.payment_method_id,
-            delivery_method_id: form.delivery_method_id,
-            rate: rateNum,
-          }),
-        });
-        if (!res.ok) throw new Error('Error al guardar');
+        await updateExchangeRateInlineAction(form.payment_method_id, form.delivery_method_id, rateNum);
       }
       setShowForm(false);
       setEditingKey(null);
@@ -129,8 +121,7 @@ export default function ExchangeRatesPage() {
   async function handleDelete(r: ExchangeRate) {
     if (!confirm(`¿Eliminar tasa ${getPMName(r.payment_method_id)} → ${getDMName(r.delivery_method_id)}?`)) return;
     try {
-      const res = await fetch(`/api/admin/exchange-rates/${rateKey(r)}`, { method: 'DELETE' });
-      if (!res.ok) throw new Error('Error al eliminar');
+      await deleteExchangeRateAction(r.payment_method_id, r.delivery_method_id);
       fetchData();
     } catch (e: unknown) {
       alert(e instanceof Error ? e.message : 'Error');

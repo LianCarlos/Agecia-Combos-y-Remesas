@@ -50,6 +50,28 @@ export interface Combo {
   updated_at: string;
 }
 
+export interface MobileRecharge {
+  id: string;
+  title: string;
+  description: string | null;
+  price_usd: number;
+  image_url: string | null;
+  active: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface Product {
+  id: string;
+  title: string;
+  description: string | null;
+  price_usd: number;
+  image_url: string | null;
+  active: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
 export interface Profile {
   id: string;
   email: string | null;
@@ -93,6 +115,46 @@ export interface RateDisplay {
   updatedAt: string;
 }
 
+/**
+ * Fila de la matriz de tasas usada por los catálogos (combos, productos,
+ * recargas) para convertir un precio en USD a la moneda del método de pago.
+ * Es un subconjunto de lo que devuelve /api/exchange-rates.
+ */
+export interface RateInfo {
+  paymentMethodId: string;
+  deliveryMethodId: string;
+  deliveryMethod: string;
+  currencyCode: string;
+  currencySymbol: string;
+  rate: number;
+}
+
+/** Método de pago reducido para los selectores de los catálogos. */
+export interface PMInfo {
+  id: string;
+  name: string;
+  active: boolean;
+  currencies?: { code: string; symbol: string } | null;
+}
+
+/** Tasa simplificada (display) para las tarjetas de recargas. */
+export interface CupRate {
+  paymentMethod: string;
+  deliveryMethod: string;
+  rate: number;
+}
+
+/**
+ * Datos de la calculadora precargados en el servidor (SSR) y pasados al
+ * cliente como props iniciales, para que funcione aunque la BD esté caída.
+ */
+export interface CalculatorData {
+  currencies: Currency[];
+  paymentMethods: PaymentMethod[];
+  deliveryMethods: DeliveryMethod[];
+  exchangeRates: RateDisplay[];
+}
+
 export interface BeneficiaryData {
   fullName: string;
   idCard: string;
@@ -115,8 +177,28 @@ export interface ComboOrder {
   total: number;
 }
 
+// ============================================================================
+// Carrito (combos + productos)
+// ============================================================================
+
+export interface CartItem {
+  id: string;
+  kind: 'combo' | 'product';
+  title: string;
+  price_usd: number;
+  quantity: number;
+}
+
+export interface CartOrder {
+  items: CartItem[];
+  total: number;            // total en USD
+  paymentMethod?: string;   // método de pago elegido (opcional)
+  payAmountLabel?: string;  // monto a pagar ya convertido, ej "1250.00 CUP"
+}
+
 export interface WhatsAppOrderData {
-  sender: SenderData;
+  /** Emisor: opcional — pedidos de combos/productos no siempre lo incluyen. */
+  sender?: SenderData;
   beneficiary: BeneficiaryData;
   remittance?: {
     originAmount: number;
@@ -128,5 +210,6 @@ export interface WhatsAppOrderData {
     deliveryMethod: string;
   };
   combo?: ComboOrder;
+  cart?: CartOrder;
   orderDate: string;
 }

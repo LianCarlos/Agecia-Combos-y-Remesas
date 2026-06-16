@@ -2,6 +2,7 @@
 
 import { useRouter } from 'next/navigation';
 import { useState, useRef, useEffect } from 'react';
+import { logoutAction } from '@/lib/actions/admin';
 
 interface AdminHeaderProps {
   adminName: string;
@@ -25,7 +26,7 @@ export function AdminHeader({ adminName, adminEmail }: AdminHeaderProps) {
   }, []);
 
   async function handleLogout() {
-    await fetch('/api/auth/logout', { method: 'POST' });
+    await logoutAction();
     router.push('/login');
     router.refresh();
   }

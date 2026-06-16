@@ -104,7 +104,11 @@ function IconWhatsApp({ className = "h-5 w-5" }: { className?: string }) {
 
 /* ─── Componente Principal ─── */
 
-export function CheckoutForm() {
+export function CheckoutForm({
+  whatsappPhone,
+}: {
+  whatsappPhone?: string;
+}) {
   const {
     currencies,
     paymentMethods,
@@ -146,14 +150,6 @@ export function CheckoutForm() {
   });
   const [fieldErrors, setFieldErrors] = useState<FieldErrors>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [adminPhone, setAdminPhone] = useState<string | undefined>(undefined);
-
-  useEffect(() => {
-    fetch("/api/settings?key=whatsapp_phone")
-      .then((r) => r.json())
-      .then((d) => { if (d.value) setAdminPhone(d.value); })
-      .catch(() => {});
-  }, []);
 
   const requiresBankData =
     selectedDeliveryMethod?.type === "transfer" ||
@@ -250,7 +246,7 @@ export function CheckoutForm() {
       orderDate: new Date().toISOString(),
     };
 
-    const url = generateWhatsAppOrderUrl(orderData, adminPhone);
+    const url = generateWhatsAppOrderUrl(orderData, whatsappPhone);
     window.open(url, "_blank", "noopener,noreferrer");
 
     setIsSubmitting(false);

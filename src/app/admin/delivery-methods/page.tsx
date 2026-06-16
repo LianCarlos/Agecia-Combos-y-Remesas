@@ -1,13 +1,16 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
-
-interface DeliveryMethod {
-  id: string;
-  name: string;
-  active: boolean;
-  type: 'cash' | 'transfer' | 'card' | null;
-}
+import {
+  getDeliveryMethodsServerAction,
+  deleteDeliveryMethodServerAction,
+} from '../actions';
+import {
+  createDeliveryMethodWithTypeAction,
+  updateDeliveryMethodFullAction,
+  toggleDeliveryMethodAction,
+} from '@/lib/actions/admin';
+import type { DeliveryMethod } from '@/types';
 
 export default function DeliveryMethodsPage() {
   const [methods, setMethods] = useState<DeliveryMethod[]>([]);
@@ -25,10 +28,7 @@ export default function DeliveryMethodsPage() {
     setLoading(true);
     setError('');
     try {
-      const res = await fetch('/api/admin/delivery-methods');
-      if (!res.ok) throw new Error('Error al cargar');
-      const data = await res.json();
-      setMethods(data);
+      setMethods(await getDeliveryMethodsServerAction());
     } catch (e: unknown) {
       setError(e instanceof Error ? e.message : 'Error desconocido');
     } finally {
@@ -56,9 +56,7 @@ export default function DeliveryMethodsPage() {
     if (!confirm(`¿Eliminar ${selectedIds.size} método(s) de entrega seleccionado(s)?`)) return;
     setBulkDeleting(true);
     try {
-      await Promise.all(Array.from(selectedIds).map(id =>
-        fetch(`/api/admin/delivery-methods/${id}`, { method: 'DELETE' })
-      ));
+      await Promise.all(Array.from(selectedIds).map(id => deleteDeliveryMethodServerAction(id)));
       setSelectedIds(new Set());
       fetchMethods();
     } catch (e: unknown) {
@@ -73,19 +71,12 @@ export default function DeliveryMethodsPage() {
     if (!formName.trim()) return;
     setSaving(true);
     try {
-      const url = editingId
-        ? `/api/admin/delivery-methods/${editingId}`
-        : '/api/admin/delivery-methods';
-      const method = editingId ? 'PUT' : 'POST';
-      const type = formRequiresBankData ? 'transfer' : 'cash';
-      const res = await fetch(url, {
-        method,
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ name: formName.trim(), type }),
-      });
-      if (!res.ok) {
-        const body = await res.json().catch(() => null);
-        throw new Error(body?.error || `Error ${res.status}`);
+      const name = formName.trim();
+      const type: 'cash' | 'transfer' = formRequiresBankData ? 'transfer' : 'cash';
+      if (editingId) {
+        await updateDeliveryMethodFullAction(editingId, { name, type });
+      } else {
+        await createDeliveryMethodWithTypeAction(name, type);
       }
       setShowForm(false);
       setEditingId(null);
@@ -101,12 +92,7 @@ export default function DeliveryMethodsPage() {
 
   async function toggleActive(m: DeliveryMethod) {
     try {
-      const res = await fetch(`/api/admin/delivery-methods/${m.id}`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ active: !m.active }),
-      });
-      if (!res.ok) throw new Error('Error');
+      await toggleDeliveryMethodAction(m.id);
       fetchMethods();
     } catch (e: unknown) {
       alert(e instanceof Error ? e.message : 'Error');
@@ -116,8 +102,7 @@ export default function DeliveryMethodsPage() {
   async function handleDelete(id: string) {
     if (!confirm('¿Eliminar este método de entrega?')) return;
     try {
-      const res = await fetch(`/api/admin/delivery-methods/${id}`, { method: 'DELETE' });
-      if (!res.ok) throw new Error('Error al eliminar');
+      await deleteDeliveryMethodServerAction(id);
       fetchMethods();
     } catch (e: unknown) {
       alert(e instanceof Error ? e.message : 'Error');

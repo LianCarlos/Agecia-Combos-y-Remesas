@@ -24,6 +24,17 @@ export function Header({ whatsappPhone = "5355555555" }: HeaderProps) {
     return () => window.removeEventListener("scroll", handleScroll);
   }, []);
 
+  function scrollToSection(e: React.MouseEvent<HTMLAnchorElement>, href: string) {
+    e.preventDefault();
+    const id = href.replace("#", "");
+    const el = document.getElementById(id);
+    if (!el) return;
+    const headerHeight = 64;
+    const top = el.getBoundingClientRect().top + window.scrollY - headerHeight;
+    window.scrollTo({ top, behavior: "smooth" });
+    setIsMenuOpen(false);
+  }
+
   const navLinks = [
     { href: "#calcular", label: "Calculadora" },
     { href: "#checkout", label: "Solicitar Remesa" },
@@ -78,6 +89,7 @@ export function Header({ whatsappPhone = "5355555555" }: HeaderProps) {
             <li key={link.href}>
               <a
                 href={link.href}
+                onClick={(e) => scrollToSection(e, link.href)}
                 className="group relative flex items-center rounded-lg px-3.5 py-2 text-sm font-medium text-slate-600 transition-all duration-200 hover:text-[#006847]"
               >
                 {link.label}
@@ -172,7 +184,7 @@ export function Header({ whatsappPhone = "5355555555" }: HeaderProps) {
             <a
               key={link.href}
               href={link.href}
-              onClick={() => setIsMenuOpen(false)}
+              onClick={(e) => scrollToSection(e, link.href)}
               className="flex items-center gap-3 rounded-xl px-4 py-3.5 text-sm font-semibold text-slate-800 transition-all duration-200 hover:bg-[#006847]/8 hover:text-[#006847]"
             >
               {link.label === "Solicitar Remesa" && (

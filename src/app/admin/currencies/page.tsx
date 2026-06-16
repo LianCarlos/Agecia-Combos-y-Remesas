@@ -1,8 +1,14 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
-
-interface Currency { id: string; code: string; name: string; symbol: string; active: boolean; created_at: string; }
+import {
+  getAllCurrenciesAction,
+  createCurrencyAction,
+  updateCurrencyAction,
+  toggleCurrencyAction,
+  deleteCurrencyAction,
+} from '@/lib/actions/admin';
+import type { Currency } from '@/types';
 
 export default function CurrenciesPage() {
   const [currencies, setCurrencies] = useState<Currency[]>([]);
@@ -19,9 +25,7 @@ export default function CurrenciesPage() {
     setLoading(true);
     setError('');
     try {
-      const res = await fetch('/api/admin/currencies');
-      if (!res.ok) throw new Error('Error al cargar monedas');
-      setCurrencies(await res.json());
+      setCurrencies(await getAllCurrenciesAction());
     } catch (e: unknown) {
       setError(e instanceof Error ? e.message : 'Error desconocido');
     } finally {
@@ -49,9 +53,7 @@ export default function CurrenciesPage() {
     if (!confirm(`¿Eliminar ${selectedIds.size} moneda(s) seleccionada(s)? Esto desvinculará los métodos de pago asociados.`)) return;
     setBulkDeleting(true);
     try {
-      await Promise.all(Array.from(selectedIds).map(id =>
-        fetch(`/api/admin/currencies/${id}`, { method: 'DELETE' })
-      ));
+      await Promise.all(Array.from(selectedIds).map(id => deleteCurrencyAction(id)));
       setSelectedIds(new Set());
       fetchCurrencies();
     } catch (e: unknown) {
@@ -66,19 +68,13 @@ export default function CurrenciesPage() {
     if (!form.name.trim() || (!editingId && !form.code.trim())) return;
     setSaving(true);
     try {
-      const url = editingId ? `/api/admin/currencies/${editingId}` : '/api/admin/currencies';
-      const method = editingId ? 'PUT' : 'POST';
-      const res = await fetch(url, {
-        method,
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          code: form.code.toUpperCase().trim(),
-          name: form.name.trim(),
-          symbol: form.symbol.trim() || '$',
-        }),
-      });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error || 'Error al guardar');
+      const name = form.name.trim();
+      const symbol = form.symbol.trim() || '$';
+      if (editingId) {
+        await updateCurrencyAction(editingId, name, symbol);
+      } else {
+        await createCurrencyAction(form.code.toUpperCase().trim(), name, symbol);
+      }
       setShowForm(false);
       setEditingId(null);
       setForm({ code: '', name: '', symbol: '' });
@@ -92,12 +88,7 @@ export default function CurrenciesPage() {
 
   async function toggleActive(c: Currency) {
     try {
-      const res = await fetch(`/api/admin/currencies/${c.id}`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ active: !c.active }),
-      });
-      if (!res.ok) throw new Error('Error');
+      await toggleCurrencyAction(c.id);
       fetchCurrencies();
     } catch (e: unknown) {
       alert(e instanceof Error ? e.message : 'Error');
@@ -107,8 +98,7 @@ export default function CurrenciesPage() {
   async function handleDelete(c: Currency) {
     if (!confirm(`¿Eliminar ${c.code} — ${c.name}? Esto desvinculará los métodos de pago asociados.`)) return;
     try {
-      const res = await fetch(`/api/admin/currencies/${c.id}`, { method: 'DELETE' });
-      if (!res.ok) throw new Error('Error al eliminar');
+      await deleteCurrencyAction(c.id);
       fetchCurrencies();
     } catch (e: unknown) {
       alert(e instanceof Error ? e.message : 'Error');

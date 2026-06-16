@@ -1,8 +1,10 @@
 'use server';
 
 import { supabaseAdmin } from '@/lib/supabase/admin';
-import { revalidatePath } from 'next/cache';
+import { createClient } from '@/lib/supabase/server';
+import { revalidatePath, revalidateTag } from 'next/cache';
 import { getCurrentUserAndProfile } from '@/lib/auth';
+import type { Product, MobileRecharge } from '@/types';
 
 async function requireAdmin() {
   const result = await getCurrentUserAndProfile();
@@ -83,6 +85,16 @@ export async function deleteCurrencyAction(id: string) {
   await requireAdmin();
   await supabaseAdmin.from('currencies').delete().eq('id', id);
   revalidatePath('/admin');
+  revalidatePath('/');
+  revalidateTag('currencies');
+}
+export async function updateCurrencyAction(id: string, name: string, symbol: string) {
+  await requireAdmin();
+  const { error } = await supabaseAdmin.from('currencies').update({ name, symbol: symbol || '$' }).eq('id', id);
+  if (error) throw new Error(error.message);
+  revalidatePath('/admin');
+  revalidatePath('/');
+  revalidateTag('currencies');
 }
 export async function getCurrenciesAction() {
   const { data } = await supabaseAdmin.from('currencies').select('*').eq('active', true).order('code');
@@ -132,6 +144,34 @@ export async function deleteDeliveryMethodAction(id: string) {
   await requireAdmin();
   await supabaseAdmin.from('delivery_methods').delete().eq('id', id);
   revalidatePath('/admin/delivery-methods');
+  revalidatePath('/');
+  revalidateTag('delivery-methods');
+}
+// Crear/editar con el campo `type` ('cash' | 'transfer'), que la UI usa para
+// decidir si el método pide datos bancarios.
+export async function createDeliveryMethodWithTypeAction(name: string, type: 'cash' | 'transfer') {
+  await requireAdmin();
+  const { data, error } = await supabaseAdmin
+    .from('delivery_methods')
+    .insert({ name, type, active: true })
+    .select()
+    .single();
+  if (error) throw new Error(error.message);
+  revalidatePath('/admin/delivery-methods');
+  revalidatePath('/');
+  revalidateTag('delivery-methods');
+  return data;
+}
+export async function updateDeliveryMethodFullAction(
+  id: string,
+  data: { name?: string; type?: 'cash' | 'transfer'; active?: boolean }
+) {
+  await requireAdmin();
+  const { error } = await supabaseAdmin.from('delivery_methods').update(data).eq('id', id);
+  if (error) throw new Error(error.message);
+  revalidatePath('/admin/delivery-methods');
+  revalidatePath('/');
+  revalidateTag('delivery-methods');
 }
 
 /* ═══════════════════════ COMBOS ═══════════════════════════ */
@@ -187,4 +227,262 @@ export async function getEmployeesAction() {
   await requireAdmin();
   const { data } = await supabaseAdmin.from('profiles').select('*').order('created_at', { ascending: false });
   return data ?? [];
+}
+
+/* ═══════════════════════ PRODUCTS ═══════════════════════ */
+export interface ProductInput {
+  title: string;
+  description?: string | null;
+  price_usd: number;
+  image_url?: string | null;
+  active?: boolean;
+}
+
+export async function getProductsAction(): Promise<Product[]> {
+  await requireAdmin();
+  const { data, error } = await supabaseAdmin.from('products').select('*').order('created_at', { ascending: false });
+  if (error) throw new Error(error.message);
+  return (data ?? []) as Product[];
+}
+
+export async function createProductAction(input: ProductInput): Promise<Product> {
+  await requireAdmin();
+  if (!input.title || input.price_usd == null) throw new Error('title y price_usd son requeridos');
+  const { data, error } = await supabaseAdmin
+    .from('products')
+    .insert({
+      title: input.title,
+      description: input.description ?? null,
+      price_usd: input.price_usd,
+      image_url: input.image_url ?? null,
+      active: input.active ?? true,
+    })
+    .select()
+    .single();
+  if (error) throw new Error(error.message);
+  revalidatePath('/');
+  revalidatePath('/admin/combos');
+  revalidateTag('products');
+  return data as Product;
+}
+
+export async function updateProductAction(id: string, input: Partial<ProductInput>): Promise<Product> {
+  await requireAdmin();
+  const updateData: Record<string, unknown> = { updated_at: new Date().toISOString() };
+  if (input.title !== undefined) updateData.title = input.title;
+  if (input.description !== undefined) updateData.description = input.description;
+  if (input.price_usd !== undefined) updateData.price_usd = input.price_usd;
+  if (input.image_url !== undefined) updateData.image_url = input.image_url;
+  if (input.active !== undefined) updateData.active = input.active;
+  const { data, error } = await supabaseAdmin
+    .from('products')
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    .update(updateData as any)
+    .eq('id', id)
+    .select()
+    .single();
+  if (error) throw new Error(error.message);
+  revalidatePath('/');
+  revalidatePath('/admin/combos');
+  revalidateTag('products');
+  return data as Product;
+}
+
+export async function deleteProductAction(id: string): Promise<void> {
+  await requireAdmin();
+  const { error } = await supabaseAdmin.from('products').delete().eq('id', id);
+  if (error) throw new Error(error.message);
+  revalidatePath('/');
+  revalidatePath('/admin/combos');
+  revalidateTag('products');
+}
+
+/* ═══════════════════════ RECARGAS (mobile_recharges) ═══════════════════════ */
+export interface RecargaInput {
+  title: string;
+  description?: string | null;
+  price_usd: number;
+  image_url?: string | null;
+  active?: boolean;
+}
+
+export async function getRecargasAction(): Promise<MobileRecharge[]> {
+  await requireAdmin();
+  const { data, error } = await supabaseAdmin.from('mobile_recharges').select('*').order('created_at', { ascending: false });
+  if (error) throw new Error(error.message);
+  return (data ?? []) as MobileRecharge[];
+}
+
+export async function createRecargaAction(input: RecargaInput): Promise<MobileRecharge> {
+  await requireAdmin();
+  if (!input.title || input.price_usd == null) throw new Error('title y price_usd son requeridos');
+  const { data, error } = await supabaseAdmin
+    .from('mobile_recharges')
+    .insert({
+      title: input.title,
+      description: input.description ?? null,
+      price_usd: input.price_usd,
+      image_url: input.image_url ?? null,
+      active: input.active ?? true,
+    })
+    .select()
+    .single();
+  if (error) throw new Error(error.message);
+  revalidatePath('/');
+  revalidatePath('/admin/recargas');
+  revalidateTag('mobile-recharges');
+  return data as MobileRecharge;
+}
+
+export async function updateRecargaAction(id: string, input: Partial<RecargaInput>): Promise<MobileRecharge> {
+  await requireAdmin();
+  const updateData: Record<string, unknown> = { updated_at: new Date().toISOString() };
+  if (input.title !== undefined) updateData.title = input.title;
+  if (input.description !== undefined) updateData.description = input.description;
+  if (input.price_usd !== undefined) updateData.price_usd = input.price_usd;
+  if (input.image_url !== undefined) updateData.image_url = input.image_url;
+  if (input.active !== undefined) updateData.active = input.active;
+  const { data, error } = await supabaseAdmin
+    .from('mobile_recharges')
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    .update(updateData as any)
+    .eq('id', id)
+    .select()
+    .single();
+  if (error) throw new Error(error.message);
+  revalidatePath('/');
+  revalidatePath('/admin/recargas');
+  revalidateTag('mobile-recharges');
+  return data as MobileRecharge;
+}
+
+export async function deleteRecargaAction(id: string): Promise<void> {
+  await requireAdmin();
+  const { error } = await supabaseAdmin.from('mobile_recharges').delete().eq('id', id);
+  if (error) throw new Error(error.message);
+  revalidatePath('/');
+  revalidatePath('/admin/recargas');
+  revalidateTag('mobile-recharges');
+}
+
+/* ═══════════════════════ IMAGE UPLOADS (Storage) ═══════════════════════ */
+async function uploadImageToStorage(bucket: string, file: File, fallbackPrefix?: string): Promise<string> {
+  const safe = file.name.replace(/[^a-zA-Z0-9._-]/g, '_');
+  const fileName = `public/${Date.now()}_${safe}`;
+  const buffer = Buffer.from(await file.arrayBuffer());
+
+  const { error } = await supabaseAdmin.storage.from(bucket).upload(fileName, buffer, {
+    contentType: file.type,
+    upsert: false,
+  });
+
+  if (error) {
+    // Fallback: bucket "combos" con prefijo, si el bucket dedicado no existe
+    if (fallbackPrefix) {
+      const fallbackName = `${fallbackPrefix}/${Date.now()}_${safe}`;
+      const { error: e2 } = await supabaseAdmin.storage.from('combos').upload(fallbackName, buffer, {
+        contentType: file.type,
+        upsert: false,
+      });
+      if (e2) throw new Error(e2.message);
+      return supabaseAdmin.storage.from('combos').getPublicUrl(fallbackName).data.publicUrl;
+    }
+    throw new Error(error.message);
+  }
+
+  return supabaseAdmin.storage.from(bucket).getPublicUrl(fileName).data.publicUrl;
+}
+
+export async function uploadComboImageAction(formData: FormData): Promise<string> {
+  await requireAdmin();
+  const file = formData.get('file') as File | null;
+  if (!file) throw new Error('No file');
+  return uploadImageToStorage('combos', file);
+}
+
+export async function uploadProductImageAction(formData: FormData): Promise<string> {
+  await requireAdmin();
+  const file = formData.get('file') as File | null;
+  if (!file) throw new Error('No file');
+  return uploadImageToStorage('products', file, 'products');
+}
+
+export async function uploadRecargaImageAction(formData: FormData): Promise<string> {
+  await requireAdmin();
+  const file = formData.get('file') as File | null;
+  if (!file) throw new Error('No file');
+  return uploadImageToStorage('recargas', file, 'recargas');
+}
+
+/* ═══════════════════════ EXCHANGE RATES (delete) ═══════════════════════ */
+export async function deleteExchangeRateAction(paymentMethodId: string, deliveryMethodId: string): Promise<void> {
+  await requireAdmin();
+  const { error } = await supabaseAdmin
+    .from('exchange_rates')
+    .delete()
+    .eq('payment_method_id', paymentMethodId)
+    .eq('delivery_method_id', deliveryMethodId);
+  if (error) throw new Error(error.message);
+  revalidatePath('/admin/exchange-rates');
+  revalidatePath('/');
+  revalidateTag('exchange-rates');
+}
+
+/* ═══════════════════════ ADMIN INIT (batched) ═══════════════════════ */
+export async function getAdminInitDataAction(): Promise<{
+  paymentMethods: { id: string; name: string; active: boolean; currency_id: string | null }[];
+  deliveryMethods: { id: string; name: string; active: boolean }[];
+}> {
+  await requireAdmin();
+  const [pm, dm] = await Promise.all([
+    supabaseAdmin.from('payment_methods').select('id, name, active, currency_id').order('name'),
+    supabaseAdmin.from('delivery_methods').select('id, name, active').order('name'),
+  ]);
+  return {
+    paymentMethods: (pm.data ?? []) as { id: string; name: string; active: boolean; currency_id: string | null }[],
+    deliveryMethods: (dm.data ?? []) as { id: string; name: string; active: boolean }[],
+  };
+}
+
+/* ═══════════════════════ SITE SETTINGS (admin password) ═══════════════════════ */
+export async function getAdminPasswordStatusAction(): Promise<{ adminPassword: string | null }> {
+  await requireAdmin();
+  const { data } = await supabaseAdmin
+    .from('site_settings')
+    .select('value')
+    .eq('key', 'admin_password')
+    .maybeSingle();
+  const hasPassword = data != null && data.value !== '';
+  return { adminPassword: hasPassword ? '***' : null };
+}
+
+export async function updateAdminPasswordAction(currentPassword: string, newPassword: string): Promise<{ success: true }> {
+  await requireAdmin();
+  if (!currentPassword?.trim()) throw new Error('La contraseña actual es obligatoria');
+  if (!newPassword?.trim()) throw new Error('La nueva contraseña no puede estar vacía');
+  if (newPassword.trim().length < 4) throw new Error('La nueva contraseña debe tener al menos 4 caracteres');
+
+  const { data: setting } = await supabaseAdmin
+    .from('site_settings')
+    .select('value')
+    .eq('key', 'admin_password')
+    .maybeSingle();
+
+  const dbPassword = setting?.value ?? '';
+  const envPassword = process.env.ADMIN_API_TOKEN ?? '';
+  const effectivePassword = dbPassword !== '' ? dbPassword : envPassword;
+
+  if (currentPassword.trim() !== effectivePassword) throw new Error('La contraseña actual es incorrecta');
+
+  const { error } = await supabaseAdmin
+    .from('site_settings')
+    .upsert({ key: 'admin_password', value: newPassword.trim(), updated_at: new Date().toISOString() }, { onConflict: 'key' });
+  if (error) throw new Error('Error al guardar la configuración');
+  return { success: true };
+}
+
+/* ═══════════════════════ AUTH (logout) ═══════════════════════ */
+export async function logoutAction(): Promise<void> {
+  const supabase = await createClient();
+  await supabase.auth.signOut();
 }

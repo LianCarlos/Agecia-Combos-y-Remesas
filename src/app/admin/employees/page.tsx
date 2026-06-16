@@ -2,14 +2,8 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { createEmployee, revokeEmployeeAccess, updateSuperadminProfile, resetEmployeePassword, getWhatsappPhone, updateWhatsappPhone } from '@/lib/actions/employees';
-
-interface Profile {
-  id: string;
-  email: string;
-  full_name: string | null;
-  role: 'superadmin' | 'empleado';
-  is_active: boolean;
-}
+import { getProfilesServerAction } from '../actions';
+import type { Profile } from '@/types';
 
 export default function EmployeesPage() {
   const [profiles, setProfiles] = useState<Profile[]>([]);
@@ -35,16 +29,17 @@ export default function EmployeesPage() {
     setLoading(true);
     setError('');
     try {
-      const res = await fetch('/api/admin/employees');
-      if (res.status === 403) { setIsSuperAdmin(false); setCheckingRole(false); setLoading(false); return; }
-      if (!res.ok) throw new Error('Error al cargar');
-      const data = await res.json();
+      const data = await getProfilesServerAction();
       setProfiles(data);
       setIsSuperAdmin(true);
       const phone = await getWhatsappPhone();
       setWhatsappPhone(phone);
     } catch (e: any) {
-      setError(e.message);
+      if (e.message?.includes('superadmin') || e.message?.includes('autorizado') || e.message?.includes('autenticado')) {
+        setIsSuperAdmin(false);
+      } else {
+        setError(e.message);
+      }
     } finally {
       setCheckingRole(false);
       setLoading(false);
@@ -384,7 +379,7 @@ export default function EmployeesPage() {
                             Contraseña
                           </button>
                           <button
-                            onClick={() => handleRevoke(p.id, p.full_name || p.email)}
+                            onClick={() => handleRevoke(p.id, p.full_name || p.email || 'este empleado')}
                             className="rounded-lg px-3 py-1.5 text-xs font-semibold text-red-600 hover:bg-red-50 transition"
                           >
                             Revocar

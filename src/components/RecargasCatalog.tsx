@@ -39,7 +39,7 @@ const getRechargesWithRates = unstable_cache(
   { revalidate: 60, tags: ["mobile-recharges", "exchange-rates"] }
 );
 
-export async function RecargasCatalog() {
+export async function RecargasCatalog({ whatsappPhone }: { whatsappPhone?: string }) {
   const { recharges, cupRates } = await getRechargesWithRates();
 
   if (recharges.length === 0) return null;
@@ -61,7 +61,7 @@ export async function RecargasCatalog() {
         </p>
       </div>
 
-      <RecargasUI recharges={recharges} cupRates={cupRates} />
+      <RecargasUI recharges={recharges} cupRates={cupRates} whatsappPhone={whatsappPhone} />
     </section>
   );
 }

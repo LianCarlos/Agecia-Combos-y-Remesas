@@ -218,6 +218,39 @@ export interface Database {
         }
         Relationships: []
       }
+      products: {
+        Row: {
+          id: string
+          title: string
+          description: string | null
+          price_usd: number
+          image_url: string | null
+          active: boolean
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          title: string
+          description?: string | null
+          price_usd: number
+          image_url?: string | null
+          active?: boolean
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          title?: string
+          description?: string | null
+          price_usd?: number
+          image_url?: string | null
+          active?: boolean
+          created_at?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       profiles: {
         Row: {
           id: string

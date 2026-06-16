@@ -1,16 +1,16 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
+import {
+  getRecargasAction,
+  createRecargaAction,
+  updateRecargaAction,
+  deleteRecargaAction,
+  uploadRecargaImageAction,
+} from '@/lib/actions/admin';
+import type { MobileRecharge } from '@/types';
 
-interface Recarga {
-  id: string;
-  title: string;
-  description: string | null;
-  price_usd: number;
-  image_url: string | null;
-  active: boolean;
-  created_at: string;
-}
+type Recarga = MobileRecharge;
 
 export default function RecargasPage() {
   const [recargas, setRecargas] = useState<Recarga[]>([]);
@@ -21,6 +21,7 @@ export default function RecargasPage() {
   const [form, setForm] = useState({ title: '', description: '', price_usd: 0, image_url: '', active: true });
   const [imageFile, setImageFile] = useState<File | null>(null);
   const [imagePreview, setImagePreview] = useState<string | null>(null);
+  const [imageMode, setImageMode] = useState<'file' | 'url'>('file');
   const [uploading, setUploading] = useState(false);
   const [saving, setSaving] = useState(false);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
@@ -30,9 +31,7 @@ export default function RecargasPage() {
     setLoading(true);
     setError('');
     try {
-      const res = await fetch('/api/admin/recargas');
-      if (!res.ok) throw new Error('Error al cargar recargas');
-      setRecargas(await res.json());
+      setRecargas(await getRecargasAction());
     } catch (e: unknown) {
       setError(e instanceof Error ? e.message : 'Error desconocido');
     } finally {
@@ -54,9 +53,7 @@ export default function RecargasPage() {
     if (!confirm(`¿Eliminar ${selectedIds.size} recarga(s) seleccionada(s)?`)) return;
     setBulkDeleting(true);
     try {
-      await Promise.all(Array.from(selectedIds).map(id =>
-        fetch(`/api/admin/recargas/${id}`, { method: 'DELETE' })
-      ));
+      await Promise.all(Array.from(selectedIds).map(id => deleteRecargaAction(id)));
       setSelectedIds(new Set());
       fetchRecargas();
     } catch (e: unknown) {
@@ -72,6 +69,13 @@ export default function RecargasPage() {
     if (file.size > 5 * 1024 * 1024) { alert('La imagen no puede superar 5MB'); return; }
     setImageFile(file);
     setImagePreview(URL.createObjectURL(file));
+    setForm(f => ({ ...f, image_url: '' }));
+  }
+
+  function handleImageUrlChange(url: string) {
+    setForm(f => ({ ...f, image_url: url }));
+    setImagePreview(url || null);
+    setImageFile(null);
   }
 
   async function uploadImage(): Promise<string | null> {
@@ -80,10 +84,7 @@ export default function RecargasPage() {
     try {
       const fd = new FormData();
       fd.append('file', imageFile);
-      const res = await fetch('/api/admin/recargas/upload', { method: 'POST', body: fd });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error);
-      return data.url as string;
+      return await uploadRecargaImageAction(fd);
     } catch (e: unknown) {
       alert(e instanceof Error ? e.message : 'Error al subir imagen');
       return null;
@@ -98,15 +99,18 @@ export default function RecargasPage() {
     setSaving(true);
     try {
       const imageUrl = await uploadImage();
-      const url = editingId ? `/api/admin/recargas/${editingId}` : '/api/admin/recargas';
-      const method = editingId ? 'PUT' : 'POST';
-      const res = await fetch(url, {
-        method,
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ ...form, price_usd: Number(form.price_usd), image_url: imageUrl }),
-      });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error || 'Error al guardar');
+      const payload = {
+        title: form.title.trim(),
+        description: form.description,
+        price_usd: Number(form.price_usd),
+        image_url: imageUrl,
+        active: form.active,
+      };
+      if (editingId) {
+        await updateRecargaAction(editingId, payload);
+      } else {
+        await createRecargaAction(payload);
+      }
       setShowForm(false);
       setEditingId(null);
       setForm({ title: '', description: '', price_usd: 0, image_url: '', active: true });
@@ -123,8 +127,7 @@ export default function RecargasPage() {
   async function handleDelete(id: string, title: string) {
     if (!confirm(`¿Eliminar recarga "${title}"?`)) return;
     try {
-      const res = await fetch(`/api/admin/recargas/${id}`, { method: 'DELETE' });
-      if (!res.ok) throw new Error('Error al eliminar');
+      await deleteRecargaAction(id);
       fetchRecargas();
     } catch (e: unknown) {
       alert(e instanceof Error ? e.message : 'Error');
@@ -133,12 +136,7 @@ export default function RecargasPage() {
 
   async function toggleActive(r: Recarga) {
     try {
-      const res = await fetch(`/api/admin/recargas/${r.id}`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ ...r, active: !r.active }),
-      });
-      if (!res.ok) throw new Error('Error al actualizar');
+      await updateRecargaAction(r.id, { active: !r.active });
       fetchRecargas();
     } catch (e: unknown) {
       alert(e instanceof Error ? e.message : 'Error');
@@ -150,6 +148,7 @@ export default function RecargasPage() {
     setForm({ title: r.title, description: r.description ?? '', price_usd: r.price_usd, image_url: r.image_url ?? '', active: r.active });
     setImagePreview(r.image_url);
     setImageFile(null);
+    setImageMode(r.image_url ? 'url' : 'file');
     setShowForm(true);
   }
 
@@ -158,6 +157,7 @@ export default function RecargasPage() {
     setForm({ title: '', description: '', price_usd: 0, image_url: '', active: true });
     setImageFile(null);
     setImagePreview(null);
+    setImageMode('file');
     setShowForm(true);
   }
 
@@ -213,9 +213,21 @@ export default function RecargasPage() {
                   placeholder="Ej: 5.00" required />
               </div>
               <div>
-                <label className="block text-sm font-medium text-slate-700 mb-1">Imagen</label>
-                <input type="file" accept="image/*" onChange={handleImageSelect}
-                  className="w-full text-sm text-slate-600 file:mr-3 file:rounded-lg file:border-0 file:bg-brand-green/10 file:px-3 file:py-2 file:text-xs file:font-semibold file:text-brand-green hover:file:bg-brand-green/20" />
+                <label className="block text-sm font-medium text-slate-700 mb-2">Imagen</label>
+                <div className="mb-3 flex overflow-hidden rounded-xl border border-slate-200">
+                  <button type="button" onClick={() => { setImageMode('file'); setForm(f => ({ ...f, image_url: '' })); setImagePreview(null); setImageFile(null); }} className={`flex-1 py-2 text-xs font-semibold transition-colors ${imageMode === 'file' ? 'bg-brand-green text-white' : 'bg-slate-50 text-slate-500 hover:bg-slate-100'}`}>
+                    Subir archivo
+                  </button>
+                  <button type="button" onClick={() => { setImageMode('url'); setImageFile(null); }} className={`flex-1 py-2 text-xs font-semibold transition-colors ${imageMode === 'url' ? 'bg-brand-green text-white' : 'bg-slate-50 text-slate-500 hover:bg-slate-100'}`}>
+                    URL externa
+                  </button>
+                </div>
+                {imageMode === 'file' ? (
+                  <input type="file" accept="image/*" onChange={handleImageSelect}
+                    className="w-full text-sm text-slate-600 file:mr-3 file:rounded-lg file:border-0 file:bg-brand-green/10 file:px-3 file:py-2 file:text-xs file:font-semibold file:text-brand-green hover:file:bg-brand-green/20" />
+                ) : (
+                  <input type="url" value={form.image_url} onChange={e => handleImageUrlChange(e.target.value)} placeholder="https://ejemplo.com/imagen.jpg" className="w-full rounded-xl border border-slate-300 px-4 py-3 text-sm focus:border-brand-green focus:ring-2 focus:ring-brand-green/20 outline-none transition" />
+                )}
                 {imagePreview && (
                   <img src={imagePreview} alt="preview" className="mt-2 h-28 w-full rounded-xl object-cover" />
                 )}
@@ -243,17 +255,17 @@ export default function RecargasPage() {
           <p className="text-sm text-slate-400">Agrega el primer plan de recarga</p>
         </div>
       ) : (
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+        <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
           {recargas.map(r => (
             <div
               key={r.id}
-              className={`rounded-2xl bg-white shadow-sm overflow-hidden border transition ${r.active ? 'border-transparent' : 'border-slate-200 opacity-60'} ${selectedIds.has(r.id) ? 'ring-2 ring-red-400' : ''}`}
+              className={`rounded-xl bg-white shadow-sm overflow-hidden border transition ${r.active ? 'border-transparent' : 'border-slate-200 opacity-60'} ${selectedIds.has(r.id) ? 'ring-2 ring-red-400' : ''}`}
             >
-              <div className="relative">
+              <div className="relative h-28 bg-slate-50 flex items-center justify-center overflow-hidden">
                 {r.image_url ? (
-                  <img src={r.image_url} alt={r.title} className="h-36 w-full object-cover" />
+                  <img src={r.image_url} alt={r.title} className="h-full w-full object-contain p-1" />
                 ) : (
-                  <div className="h-24 w-full bg-gradient-to-br from-brand-green/10 to-emerald-50 flex items-center justify-center">
+                  <div className="flex h-full w-full items-center justify-center bg-gradient-to-br from-brand-green/10 to-emerald-50">
                     <span className="text-3xl">📱</span>
                   </div>
                 )}
@@ -267,12 +279,12 @@ export default function RecargasPage() {
                   />
                 </div>
               </div>
-              <div className="p-4">
-                <div className="flex items-start justify-between gap-2">
-                  <h3 className="font-bold text-slate-800 text-sm leading-tight">{r.title}</h3>
-                  <span className="text-base font-extrabold text-brand-green whitespace-nowrap">${r.price_usd.toFixed(2)}</span>
+              <div className="p-3">
+                <div className="flex items-start justify-between gap-1">
+                  <h3 className="text-xs font-bold text-slate-800 leading-tight line-clamp-1">{r.title}</h3>
+                  <span className="text-sm font-extrabold text-brand-green whitespace-nowrap">${r.price_usd.toFixed(2)}</span>
                 </div>
-                {r.description && <p className="mt-1 text-xs text-slate-500 line-clamp-2">{r.description}</p>}
+                {r.description && <p className="mt-0.5 text-xs text-slate-500 line-clamp-1">{r.description}</p>}
                 <div className="mt-3 flex items-center gap-2 flex-wrap">
                   <button onClick={() => toggleActive(r)}
                     className={`rounded-lg px-3 py-1.5 text-xs font-semibold transition ${r.active ? 'bg-amber-50 text-amber-700 hover:bg-amber-100' : 'bg-emerald-50 text-emerald-700 hover:bg-emerald-100'}`}>

@@ -120,7 +120,7 @@ export function AdminSidebar({ isSuperAdmin, collapsed: collapsedProp, onCollaps
     { href: '/admin/payment-methods', icon: PaymentIcon, label: 'Métodos de Pago' },
     { href: '/admin/delivery-methods', icon: DeliveryIcon, label: 'Métodos de Entrega' },
     { href: '/admin/exchange-rates', icon: RatesIcon, label: 'Tasas de Cambio' },
-    { href: '/admin/combos', icon: CombosIcon, label: 'Combos' },
+    { href: '/admin/combos', icon: CombosIcon, label: 'Combos y Productos' },
     { href: '/admin/recargas', icon: RecargasIcon, label: 'Recargas' },
     ...(isSuperAdmin
       ? [{ href: '/admin/employees', icon: EmployeesIcon, label: 'Empleados' }]

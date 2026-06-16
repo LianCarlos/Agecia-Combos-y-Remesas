@@ -1,9 +1,17 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
-
-interface Currency { id: string; code: string; name: string; }
-interface PaymentMethod { id: string; name: string; active: boolean; currency_id: string | null; }
+import {
+  getPaymentMethodsServerAction,
+  createPaymentMethodServerAction,
+  updatePaymentMethodServerAction,
+  deletePaymentMethodServerAction,
+} from '../actions';
+import {
+  togglePaymentMethodAction,
+  getAllCurrenciesAction,
+} from '@/lib/actions/admin';
+import type { Currency, PaymentMethod } from '@/types';
 
 export default function PaymentMethodsPage() {
   const [methods, setMethods] = useState<PaymentMethod[]>([]);
@@ -22,17 +30,12 @@ export default function PaymentMethodsPage() {
     setLoading(true);
     setError('');
     try {
-      const [pmRes, curRes] = await Promise.all([
-        fetch('/api/admin/payment-methods'),
-        fetch('/api/admin/currencies'),
+      const [pmData, curData] = await Promise.all([
+        getPaymentMethodsServerAction(),
+        getAllCurrenciesAction(),
       ]);
-      if (!pmRes.ok) throw new Error('Error al cargar métodos de pago');
-      const pmData = await pmRes.json();
       setMethods(pmData);
-      if (curRes.ok) {
-        const curData = await curRes.json();
-        setCurrencies(curData);
-      }
+      setCurrencies(curData);
     } catch (e: unknown) {
       setError(e instanceof Error ? e.message : 'Error desconocido');
     } finally {
@@ -66,9 +69,7 @@ export default function PaymentMethodsPage() {
     if (!confirm(`¿Eliminar ${selectedIds.size} método(s) de pago seleccionado(s)?`)) return;
     setBulkDeleting(true);
     try {
-      await Promise.all(Array.from(selectedIds).map(id =>
-        fetch(`/api/admin/payment-methods/${id}`, { method: 'DELETE' })
-      ));
+      await Promise.all(Array.from(selectedIds).map(id => deletePaymentMethodServerAction(id)));
       setSelectedIds(new Set());
       fetchAll();
     } catch (e: unknown) {
@@ -83,19 +84,12 @@ export default function PaymentMethodsPage() {
     if (!formName.trim()) return;
     setSaving(true);
     try {
-      const url = editingId ? `/api/admin/payment-methods/${editingId}` : '/api/admin/payment-methods';
-      const method = editingId ? 'PUT' : 'POST';
-      const res = await fetch(url, {
-        method,
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          name: formName.trim(),
-          currency_id: formCurrencyId || null,
-        }),
-      });
-      if (!res.ok) {
-        const body = await res.json().catch(() => null);
-        throw new Error(body?.error || `Error ${res.status} al guardar`);
+      const name = formName.trim();
+      if (editingId) {
+        const current = methods.find(m => m.id === editingId);
+        await updatePaymentMethodServerAction(editingId, name, current?.active ?? true, formCurrencyId || null);
+      } else {
+        await createPaymentMethodServerAction(name, formCurrencyId || undefined);
       }
       setShowForm(false);
       setEditingId(null);
@@ -111,12 +105,7 @@ export default function PaymentMethodsPage() {
 
   async function toggleActive(m: PaymentMethod) {
     try {
-      const res = await fetch(`/api/admin/payment-methods/${m.id}`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ active: !m.active }),
-      });
-      if (!res.ok) throw new Error('Error');
+      await togglePaymentMethodAction(m.id);
       fetchAll();
     } catch (e: unknown) {
       alert(e instanceof Error ? e.message : 'Error');
@@ -126,8 +115,7 @@ export default function PaymentMethodsPage() {
   async function handleDelete(id: string) {
     if (!confirm('¿Eliminar este método de pago?')) return;
     try {
-      const res = await fetch(`/api/admin/payment-methods/${id}`, { method: 'DELETE' });
-      if (!res.ok) throw new Error('Error al eliminar');
+      await deletePaymentMethodServerAction(id);
       fetchAll();
     } catch (e: unknown) {
       alert(e instanceof Error ? e.message : 'Error');

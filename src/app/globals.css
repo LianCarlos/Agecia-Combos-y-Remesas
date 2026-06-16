@@ -526,6 +526,23 @@ body::before {
   100% { background-position: 200% 0; }
 }
 
+/* ─── Page transition ─── */
+@keyframes pageEnter {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Aplica en cada navegación de página (public + admin) */
+main {
+  animation: pageEnter 0.35s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
 /* ─── Animation utility classes ─── */
 .animate-fade-in {
   animation: fadeIn 0.4s ease-out forwards;
@@ -616,4 +633,43 @@ body::before {
 .animate-gradient {
   background-size: 200% 200%;
   animation: gradient-shift 8s ease infinite;
+}
+
+/* ─── Cart drawer slide-in ─── */
+.animate-slide-in-right {
+  animation: slideInRight 0.3s cubic-bezier(0.25, 0.46, 0.45, 0.94) forwards;
+}
+
+/* ─── Reveal on scroll (IntersectionObserver) ─── */
+.reveal {
+  opacity: 0;
+  transform: translateY(28px);
+  /* Sin transición al salir: el reset es instantáneo para que la próxima
+     entrada siempre vea la animación de entrada completa. */
+  will-change: opacity, transform;
+}
+.reveal.is-visible {
+  opacity: 1;
+  transform: translateY(0);
+  transition:
+    opacity 0.55s cubic-bezier(0.22, 1, 0.36, 1),
+    transform 0.55s cubic-bezier(0.22, 1, 0.36, 1);
+  transition-delay: var(--reveal-delay, 0ms);
+}
+
+/* ─── Respeto a usuarios con "reduce motion" ─── */
+@media (prefers-reduced-motion: reduce) {
+  .reveal {
+    opacity: 1 !important;
+    transform: none !important;
+    transition: none !important;
+  }
+  .animate-fade-in,
+  .animate-fade-in-up,
+  .animate-slide-up,
+  .animate-number-pop,
+  .animate-slide-in-right,
+  .mobile-slide-panel {
+    animation: none !important;
+  }
 }
