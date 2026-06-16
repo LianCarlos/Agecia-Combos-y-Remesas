@@ -127,7 +127,7 @@ export default async function Home() {
   }));
 
   return (
-    <>
+    <CartProvider whatsappPhone={whatsappPhone} paymentMethods={cartPaymentMethods} rates={cartRates}>
       <Header whatsappPhone={whatsappPhone} />
 
       <main className="min-h-screen">
@@ -234,8 +234,7 @@ export default async function Home() {
         {/* ═══════════════════════════════════════════════════════════
             COMBOS Y PRODUCTOS (carrito compartido)
             ═══════════════════════════════════════════════════════════ */}
-        <CartProvider whatsappPhone={whatsappPhone} paymentMethods={cartPaymentMethods} rates={cartRates}>
-          <Reveal>
+        <Reveal>
             <ComboCatalog initialData={combos} />
           </Reveal>
 
@@ -253,8 +252,6 @@ export default async function Home() {
           <Reveal>
             <ProductsCatalog initialData={products} />
           </Reveal>
-          <CartWidget />
-        </CartProvider>
 
         {/* ═══════════════════════════════════════════════════════════
             RECARGAS MÓVILES
@@ -287,6 +284,7 @@ export default async function Home() {
       </main>
 
       <Footer whatsappPhone={whatsappPhone} />
-    </>
+      <CartWidget />
+    </CartProvider>
   );
 }
