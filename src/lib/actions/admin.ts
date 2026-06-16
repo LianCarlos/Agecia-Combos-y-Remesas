@@ -2,7 +2,7 @@
 
 import { supabaseAdmin } from '@/lib/supabase/admin';
 import { createClient } from '@/lib/supabase/server';
-import { revalidatePath, revalidateTag } from 'next/cache';
+import { revalidatePath } from 'next/cache';
 import { getCurrentUserAndProfile } from '@/lib/auth';
 import type { Product, MobileRecharge } from '@/types';
 
@@ -86,7 +86,6 @@ export async function deleteCurrencyAction(id: string) {
   await supabaseAdmin.from('currencies').delete().eq('id', id);
   revalidatePath('/admin');
   revalidatePath('/');
-  revalidateTag('currencies');
 }
 export async function updateCurrencyAction(id: string, name: string, symbol: string) {
   await requireAdmin();
@@ -94,7 +93,6 @@ export async function updateCurrencyAction(id: string, name: string, symbol: str
   if (error) throw new Error(error.message);
   revalidatePath('/admin');
   revalidatePath('/');
-  revalidateTag('currencies');
 }
 export async function getCurrenciesAction() {
   const { data } = await supabaseAdmin.from('currencies').select('*').eq('active', true).order('code');
@@ -145,7 +143,6 @@ export async function deleteDeliveryMethodAction(id: string) {
   await supabaseAdmin.from('delivery_methods').delete().eq('id', id);
   revalidatePath('/admin/delivery-methods');
   revalidatePath('/');
-  revalidateTag('delivery-methods');
 }
 // Crear/editar con el campo `type` ('cash' | 'transfer'), que la UI usa para
 // decidir si el método pide datos bancarios.
@@ -159,7 +156,6 @@ export async function createDeliveryMethodWithTypeAction(name: string, type: 'ca
   if (error) throw new Error(error.message);
   revalidatePath('/admin/delivery-methods');
   revalidatePath('/');
-  revalidateTag('delivery-methods');
   return data;
 }
 export async function updateDeliveryMethodFullAction(
@@ -171,7 +167,6 @@ export async function updateDeliveryMethodFullAction(
   if (error) throw new Error(error.message);
   revalidatePath('/admin/delivery-methods');
   revalidatePath('/');
-  revalidateTag('delivery-methods');
 }
 
 /* ═══════════════════════ COMBOS ═══════════════════════════ */
@@ -262,7 +257,6 @@ export async function createProductAction(input: ProductInput): Promise<Product>
   if (error) throw new Error(error.message);
   revalidatePath('/');
   revalidatePath('/admin/combos');
-  revalidateTag('products');
   return data as Product;
 }
 
@@ -284,7 +278,6 @@ export async function updateProductAction(id: string, input: Partial<ProductInpu
   if (error) throw new Error(error.message);
   revalidatePath('/');
   revalidatePath('/admin/combos');
-  revalidateTag('products');
   return data as Product;
 }
 
@@ -294,7 +287,6 @@ export async function deleteProductAction(id: string): Promise<void> {
   if (error) throw new Error(error.message);
   revalidatePath('/');
   revalidatePath('/admin/combos');
-  revalidateTag('products');
 }
 
 /* ═══════════════════════ RECARGAS (mobile_recharges) ═══════════════════════ */
@@ -330,7 +322,6 @@ export async function createRecargaAction(input: RecargaInput): Promise<MobileRe
   if (error) throw new Error(error.message);
   revalidatePath('/');
   revalidatePath('/admin/recargas');
-  revalidateTag('mobile-recharges');
   return data as MobileRecharge;
 }
 
@@ -352,7 +343,6 @@ export async function updateRecargaAction(id: string, input: Partial<RecargaInpu
   if (error) throw new Error(error.message);
   revalidatePath('/');
   revalidatePath('/admin/recargas');
-  revalidateTag('mobile-recharges');
   return data as MobileRecharge;
 }
 
@@ -362,7 +352,6 @@ export async function deleteRecargaAction(id: string): Promise<void> {
   if (error) throw new Error(error.message);
   revalidatePath('/');
   revalidatePath('/admin/recargas');
-  revalidateTag('mobile-recharges');
 }
 
 /* ═══════════════════════ IMAGE UPLOADS (Storage) ═══════════════════════ */
@@ -425,7 +414,6 @@ export async function deleteExchangeRateAction(paymentMethodId: string, delivery
   if (error) throw new Error(error.message);
   revalidatePath('/admin/exchange-rates');
   revalidatePath('/');
-  revalidateTag('exchange-rates');
 }
 
 /* ═══════════════════════ ADMIN INIT (batched) ═══════════════════════ */

@@ -1,9 +1,7 @@
 import { Suspense } from 'react';
-import { getAllPaymentMethods } from '@/lib/services/payment-methods';
-import { getAllDeliveryMethods } from '@/lib/services/delivery-methods';
-import { getRateMatrix } from '@/lib/services/exchange-rates';
-import { getAllCombos } from '@/lib/services/combos';
-import { getAllProfiles } from '@/lib/services/profiles';
+import { supabaseAdmin } from '@/lib/supabase/admin';
+
+export const dynamic = 'force-dynamic';
 
 /* ─── Stat Card ─── */
 
@@ -63,29 +61,27 @@ function StatCardSkeleton({ borderColor }: { borderColor: 'green' | 'red' }) {
 /* ─── Async Stats Loader ─── */
 
 async function DashboardStats() {
-  console.log('[TRACE] 🟪 DashboardStats → Iniciando carga de 5 stats...');
   try {
-    const [payments, deliveries, rates, combos, profiles] = await Promise.all([
-      getAllPaymentMethods(),
-      getAllDeliveryMethods(),
-      getRateMatrix(),
-      getAllCombos(),
-      getAllProfiles(),
+    const [
+      { count: activePayments },
+      { count: activeDeliveries },
+      { count: totalRates },
+      { count: availableCombos },
+      { count: activeEmployees },
+    ] = await Promise.all([
+      supabaseAdmin.from('payment_methods').select('*', { count: 'exact', head: true }).eq('active', true),
+      supabaseAdmin.from('delivery_methods').select('*', { count: 'exact', head: true }).eq('active', true),
+      supabaseAdmin.from('exchange_rates').select('*', { count: 'exact', head: true }),
+      supabaseAdmin.from('combos').select('*', { count: 'exact', head: true }).eq('available', true),
+      supabaseAdmin.from('profiles').select('*', { count: 'exact', head: true }).eq('role', 'empleado').eq('is_active', true),
     ]);
-    console.log('[TRACE] 🟪 DashboardStats → 5 queries completadas:', {
-      payments: payments.length,
-      deliveries: deliveries.length,
-      rates: Array.isArray(rates) ? rates.length : 0,
-      combos: combos.length,
-      profiles: profiles.length,
-    });
 
     const stats = [
-      { icon: '💳', label: 'Pagos activos', value: payments.filter((p) => p.active).length, borderColor: 'green' as const },
-      { icon: '🚚', label: 'Entregas activas', value: deliveries.filter((d) => d.active).length, borderColor: 'red' as const },
-      { icon: '📊', label: 'Tasas configuradas', value: Array.isArray(rates) ? rates.length : 0, borderColor: 'green' as const },
-      { icon: '📦', label: 'Combos disponibles', value: combos.filter((c) => c.available).length, borderColor: 'red' as const },
-      { icon: '👥', label: 'Empleados activos', value: profiles.filter((p) => p.role === 'empleado' && p.is_active).length, borderColor: 'green' as const },
+      { icon: '💳', label: 'Pagos activos',      value: activePayments    ?? 0, borderColor: 'green' as const },
+      { icon: '🚚', label: 'Entregas activas',   value: activeDeliveries  ?? 0, borderColor: 'red'   as const },
+      { icon: '📊', label: 'Tasas configuradas', value: totalRates        ?? 0, borderColor: 'green' as const },
+      { icon: '📦', label: 'Combos disponibles', value: availableCombos   ?? 0, borderColor: 'red'   as const },
+      { icon: '👥', label: 'Empleados activos',  value: activeEmployees   ?? 0, borderColor: 'green' as const },
     ];
 
     return (
@@ -96,7 +92,7 @@ async function DashboardStats() {
       </div>
     );
   } catch (e) {
-    console.error('[TRACE] 🟪 DashboardStats → ERROR cargando stats:', e);
+    console.error('[DashboardStats] ERROR:', e);
     return (
       <div className="rounded-2xl border border-red-200 bg-red-50 p-6 text-center">
         <p className="text-sm font-medium text-red-600">

@@ -7,8 +7,8 @@ export interface Currency {
   code: string;
   name: string;
   symbol: string;
-  active: boolean;
-  created_at: string;
+  active: boolean | null;
+  created_at: string | null;
 }
 
 export interface PaymentMethod {
