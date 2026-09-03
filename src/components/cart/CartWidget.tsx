@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useCart } from "./CartProvider";
 import { convertToPaymentCurrency } from "@/lib/utils/currency-convert";
 import { generateWhatsAppOrderUrl } from "@/lib/utils/whatsapp";
@@ -40,6 +40,19 @@ export function CartWidget() {
   const pm = paymentMethods.find((p) => p.id === pmId);
   const converted = pmId ? convertToPaymentCurrency(totalUSD, pmId, rates) : null;
   const canSend = name.trim().length > 0 && phone.trim().length >= 7 && pmId !== "";
+
+  // Mientras el drawer esté abierto: bloquear scroll del body y cerrar con Escape.
+  useEffect(() => {
+    if (!isOpen) return;
+    const prevOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    const onKey = (e: KeyboardEvent) => { if (e.key === "Escape") close(); };
+    window.addEventListener("keydown", onKey);
+    return () => {
+      window.removeEventListener("keydown", onKey);
+      document.body.style.overflow = prevOverflow;
+    };
+  }, [isOpen, close]);
 
   function handleClose() {
     close();

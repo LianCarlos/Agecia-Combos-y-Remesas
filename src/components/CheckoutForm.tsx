@@ -9,7 +9,19 @@ import type {
   WhatsAppOrderData,
 } from "@/types";
 
-type FieldErrors = Partial<Record<keyof SenderData | keyof BeneficiaryData, boolean>>;
+// Claves de error con namespace: emisor y beneficiario NO comparten estado
+// (antes 'fullName'/'phone' colisionaban y se marcaban/limpiaban a la vez).
+type ErrorKey =
+  | "senderFullName"
+  | "senderPhone"
+  | "beneficiaryFullName"
+  | "beneficiaryIdCard"
+  | "beneficiaryPhone"
+  | "beneficiaryAddress"
+  | "beneficiaryCardNumber"
+  | "beneficiaryConfirmationPhone"
+  | "remittance";
+type FieldErrors = Partial<Record<ErrorKey, boolean>>;
 
 /* ─── SVG Icons ─── */
 
@@ -169,39 +181,55 @@ export function CheckoutForm({
     }
   }
 
+  function clearError(key: ErrorKey) {
+    setFieldErrors((prev) => {
+      if (!prev[key]) return prev;
+      const next = { ...prev };
+      delete next[key];
+      return next;
+    });
+  }
+
   function handleSenderChange(field: keyof SenderData, value: string) {
     setSender((prev) => ({ ...prev, [field]: value }));
-    if (fieldErrors[field]) {
-      setFieldErrors((prev) => {
-        const next = { ...prev };
-        delete next[field];
-        return next;
-      });
-    }
+    if (field === "fullName") clearError("senderFullName");
+    if (field === "phone") clearError("senderPhone");
   }
 
   function handleBeneficiaryChange(field: keyof BeneficiaryData, value: string) {
     setBeneficiary((prev) => ({ ...prev, [field]: value }));
-    if (fieldErrors[field]) {
-      setFieldErrors((prev) => {
-        const next = { ...prev };
-        delete next[field];
-        return next;
-      });
-    }
+    const map: Partial<Record<keyof BeneficiaryData, ErrorKey>> = {
+      fullName: "beneficiaryFullName",
+      idCard: "beneficiaryIdCard",
+      phone: "beneficiaryPhone",
+      address: "beneficiaryAddress",
+      cardNumber: "beneficiaryCardNumber",
+      confirmationPhone: "beneficiaryConfirmationPhone",
+    };
+    const key = map[field];
+    if (key) clearError(key);
   }
 
   function validate(): boolean {
     const errors: FieldErrors = {};
 
-    if (!sender.fullName.trim()) errors.fullName = true;
-    if (!sender.phone.trim()) errors.phone = true;
-    if (!beneficiary.fullName.trim()) errors.fullName = true;
-    if (!beneficiary.idCard.trim()) errors.idCard = true;
-    if (!beneficiary.phone.trim()) errors.phone = true;
-    if (!beneficiary.address.trim()) errors.address = true;
-    if (requiresBankData && !beneficiary.cardNumber?.trim()) errors.cardNumber = true;
-    if (requiresBankData && !beneficiary.confirmationPhone?.trim()) errors.confirmationPhone = true;
+    if (!sender.fullName.trim()) errors.senderFullName = true;
+    if (!sender.phone.trim()) errors.senderPhone = true;
+    if (!beneficiary.fullName.trim()) errors.beneficiaryFullName = true;
+    if (!beneficiary.idCard.trim()) errors.beneficiaryIdCard = true;
+    if (!beneficiary.phone.trim()) errors.beneficiaryPhone = true;
+    if (!beneficiary.address.trim()) errors.beneficiaryAddress = true;
+    if (requiresBankData && !beneficiary.cardNumber?.trim()) errors.beneficiaryCardNumber = true;
+    if (requiresBankData && !beneficiary.confirmationPhone?.trim()) errors.beneficiaryConfirmationPhone = true;
+
+    // El dinero es obligatorio: no se envía una solicitud sin monto ni tasa.
+    const validMoney =
+      !!selectedPaymentMethod &&
+      !!selectedDeliveryMethod &&
+      amount > 0 &&
+      receivingAmount !== null &&
+      receivingAmount > 0;
+    if (!validMoney) errors.remittance = true;
 
     setFieldErrors(errors);
     return Object.keys(errors).length === 0;
@@ -213,6 +241,9 @@ export function CheckoutForm({
     if (!validate()) return;
 
     setIsSubmitting(true);
+
+    // El centinela interno "__OTHER__" nunca debe salir al mensaje de WhatsApp.
+    const cleanCurrency = originCurrency === "__OTHER__" ? "USD" : originCurrency;
 
     const orderData: WhatsAppOrderData = {
       sender: {
@@ -238,7 +269,7 @@ export function CheckoutForm({
             receivingAmount: receivingAmount ?? 0,
             originAmount: amount,
             originCountry,
-            originCurrency,
+            originCurrency: cleanCurrency,
             paymentMethod: selectedPaymentMethod.name,
             deliveryMethod: selectedDeliveryMethod.name,
           }
@@ -252,10 +283,9 @@ export function CheckoutForm({
     setIsSubmitting(false);
   }
 
-  function inputClass(field: keyof SenderData | keyof BeneficiaryData) {
-    if (fieldErrors[field]) return "w-full rounded-xl border-2 border-red-400 bg-red-50/40 py-3 pl-10 pr-4 text-sm font-medium text-slate-800 outline-none transition-all duration-200 placeholder:text-slate-400 focus:border-red-500 focus:ring-4 focus:ring-red-100";
-    const val = ((sender as unknown as Record<string, string>)[field] ?? (beneficiary as unknown as Record<string, string>)[field] ?? "");
-    if (val.trim().length > 0) return "w-full rounded-xl border-2 border-emerald-400/60 bg-emerald-50/30 py-3 pl-10 pr-4 text-sm font-medium text-slate-800 outline-none transition-all duration-200 placeholder:text-slate-400 focus:border-emerald-500 focus:ring-4 focus:ring-emerald-100";
+  function inputClass(hasError: boolean, value: string) {
+    if (hasError) return "w-full rounded-xl border-2 border-red-400 bg-red-50/40 py-3 pl-10 pr-4 text-sm font-medium text-slate-800 outline-none transition-all duration-200 placeholder:text-slate-400 focus:border-red-500 focus:ring-4 focus:ring-red-100";
+    if (value.trim().length > 0) return "w-full rounded-xl border-2 border-emerald-400/60 bg-emerald-50/30 py-3 pl-10 pr-4 text-sm font-medium text-slate-800 outline-none transition-all duration-200 placeholder:text-slate-400 focus:border-emerald-500 focus:ring-4 focus:ring-emerald-100";
     return "w-full rounded-xl border-2 border-slate-200 bg-white py-3 pl-10 pr-4 text-sm font-medium text-slate-800 outline-none transition-all duration-200 placeholder:text-slate-400 focus:border-brand-green focus:ring-4 focus:ring-brand-green/15";
   }
 
@@ -402,7 +432,7 @@ export function CheckoutForm({
                         min={0}
                         step="0.01"
                         value={amount || ""}
-                        onChange={(e) => setAmount(Number(e.target.value))}
+                        onChange={(e) => setAmount(Math.max(0, Number(e.target.value) || 0))}
                         placeholder="0.00"
                         className="w-full rounded-xl border-2 border-slate-200 bg-white py-3.5 pl-10 pr-16 text-lg font-bold text-slate-800 outline-none transition-all duration-200 placeholder:text-slate-300 hover:border-slate-300 focus:border-brand-green focus:ring-4 focus:ring-brand-green/10"
                       />
@@ -476,10 +506,10 @@ export function CheckoutForm({
                           value={sender.fullName}
                           onChange={(e) => handleSenderChange("fullName", e.target.value)}
                           placeholder="Ej: Juan Pérez"
-                          className={inputClass("fullName")}
+                          className={inputClass(!!fieldErrors.senderFullName, sender.fullName)}
                         />
                       </div>
-                      {fieldErrors.fullName && (
+                      {fieldErrors.senderFullName && (
                         <p className="mt-1.5 flex items-center gap-1.5 text-xs font-semibold text-red-600">
                           <svg className="h-3.5 w-3.5" fill="currentColor" viewBox="0 0 20 20" aria-hidden="true">
                             <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-8-5a.75.75 0 01.75.75v4.5a.75.75 0 01-1.5 0v-4.5A.75.75 0 0110 5zm0 10a1 1 0 100-2 1 1 0 000 2z" clipRule="evenodd" />
@@ -505,10 +535,10 @@ export function CheckoutForm({
                           value={sender.phone}
                           onChange={(e) => handleSenderChange("phone", e.target.value)}
                           placeholder="+1 555 123 4567"
-                          className={inputClass("phone")}
+                          className={inputClass(!!fieldErrors.senderPhone, sender.phone)}
                         />
                       </div>
-                      {fieldErrors.phone && (
+                      {fieldErrors.senderPhone && (
                         <p className="mt-1.5 flex items-center gap-1.5 text-xs font-semibold text-red-600">
                           <svg className="h-3.5 w-3.5" fill="currentColor" viewBox="0 0 20 20" aria-hidden="true">
                             <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-8-5a.75.75 0 01.75.75v4.5a.75.75 0 01-1.5 0v-4.5A.75.75 0 0110 5zm0 10a1 1 0 100-2 1 1 0 000 2z" clipRule="evenodd" />
@@ -546,10 +576,10 @@ export function CheckoutForm({
                           value={beneficiary.fullName}
                           onChange={(e) => handleBeneficiaryChange("fullName", e.target.value)}
                           placeholder="Ej: María García"
-                          className={inputClass("fullName")}
+                          className={inputClass(!!fieldErrors.beneficiaryFullName, beneficiary.fullName)}
                         />
                       </div>
-                      {fieldErrors.fullName && (
+                      {fieldErrors.beneficiaryFullName && (
                         <p className="mt-1.5 flex items-center gap-1.5 text-xs font-semibold text-red-600">
                           <svg className="h-3.5 w-3.5" fill="currentColor" viewBox="0 0 20 20" aria-hidden="true">
                             <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-8-5a.75.75 0 01.75.75v4.5a.75.75 0 01-1.5 0v-4.5A.75.75 0 0110 5zm0 10a1 1 0 100-2 1 1 0 000 2z" clipRule="evenodd" />
@@ -571,14 +601,15 @@ export function CheckoutForm({
                         <input
                           id="beneficiary-idcard"
                           type="text"
+                          inputMode="numeric"
                           required
                           value={beneficiary.idCard}
                           onChange={(e) => handleBeneficiaryChange("idCard", e.target.value)}
                           placeholder="Ej: 12345678901"
-                          className={inputClass("idCard")}
+                          className={inputClass(!!fieldErrors.beneficiaryIdCard, beneficiary.idCard)}
                         />
                       </div>
-                      {fieldErrors.idCard && (
+                      {fieldErrors.beneficiaryIdCard && (
                         <p className="mt-1.5 flex items-center gap-1.5 text-xs font-semibold text-red-600">
                           <svg className="h-3.5 w-3.5" fill="currentColor" viewBox="0 0 20 20" aria-hidden="true">
                             <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-8-5a.75.75 0 01.75.75v4.5a.75.75 0 01-1.5 0v-4.5A.75.75 0 0110 5zm0 10a1 1 0 100-2 1 1 0 000 2z" clipRule="evenodd" />
@@ -604,10 +635,10 @@ export function CheckoutForm({
                           value={beneficiary.phone}
                           onChange={(e) => handleBeneficiaryChange("phone", e.target.value)}
                           placeholder="+53 5 123 4567"
-                          className={inputClass("phone")}
+                          className={inputClass(!!fieldErrors.beneficiaryPhone, beneficiary.phone)}
                         />
                       </div>
-                      {fieldErrors.phone && (
+                      {fieldErrors.beneficiaryPhone && (
                         <p className="mt-1.5 flex items-center gap-1.5 text-xs font-semibold text-red-600">
                           <svg className="h-3.5 w-3.5" fill="currentColor" viewBox="0 0 20 20" aria-hidden="true">
                             <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-8-5a.75.75 0 01.75.75v4.5a.75.75 0 01-1.5 0v-4.5A.75.75 0 0110 5zm0 10a1 1 0 100-2 1 1 0 000 2z" clipRule="evenodd" />
@@ -633,10 +664,10 @@ export function CheckoutForm({
                           value={beneficiary.address}
                           onChange={(e) => handleBeneficiaryChange("address", e.target.value)}
                           placeholder="Ej: Calle 23 #456, Vedado, La Habana"
-                          className={inputClass("address")}
+                          className={inputClass(!!fieldErrors.beneficiaryAddress, beneficiary.address)}
                         />
                       </div>
-                      {fieldErrors.address && (
+                      {fieldErrors.beneficiaryAddress && (
                         <p className="mt-1.5 flex items-center gap-1.5 text-xs font-semibold text-red-600">
                           <svg className="h-3.5 w-3.5" fill="currentColor" viewBox="0 0 20 20" aria-hidden="true">
                             <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-8-5a.75.75 0 01.75.75v4.5a.75.75 0 01-1.5 0v-4.5A.75.75 0 0110 5zm0 10a1 1 0 100-2 1 1 0 000 2z" clipRule="evenodd" />
@@ -674,10 +705,10 @@ export function CheckoutForm({
                               value={beneficiary.cardNumber ?? ""}
                               onChange={(e) => handleBeneficiaryChange("cardNumber", e.target.value)}
                               placeholder="Ej: 9204 1234 5678 9012"
-                              className={inputClass("cardNumber")}
+                              className={inputClass(!!fieldErrors.beneficiaryCardNumber, beneficiary.cardNumber ?? "")}
                             />
                           </div>
-                          {fieldErrors.cardNumber && (
+                          {fieldErrors.beneficiaryCardNumber && (
                             <p className="mt-1.5 flex items-center gap-1.5 text-xs font-semibold text-red-600">
                               <svg className="h-3.5 w-3.5" fill="currentColor" viewBox="0 0 20 20" aria-hidden="true">
                                 <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-8-5a.75.75 0 01.75.75v4.5a.75.75 0 01-1.5 0v-4.5A.75.75 0 0110 5zm0 10a1 1 0 100-2 1 1 0 000 2z" clipRule="evenodd" />
@@ -703,10 +734,10 @@ export function CheckoutForm({
                               value={beneficiary.confirmationPhone ?? ""}
                               onChange={(e) => handleBeneficiaryChange("confirmationPhone", e.target.value)}
                               placeholder="+53 5 123 4567"
-                              className={inputClass("confirmationPhone")}
+                              className={inputClass(!!fieldErrors.beneficiaryConfirmationPhone, beneficiary.confirmationPhone ?? "")}
                             />
                           </div>
-                          {fieldErrors.confirmationPhone && (
+                          {fieldErrors.beneficiaryConfirmationPhone && (
                             <p className="mt-1.5 flex items-center gap-1.5 text-xs font-semibold text-red-600">
                               <svg className="h-3.5 w-3.5" fill="currentColor" viewBox="0 0 20 20" aria-hidden="true">
                                 <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-8-5a.75.75 0 01.75.75v4.5a.75.75 0 01-1.5 0v-4.5A.75.75 0 0110 5zm0 10a1 1 0 100-2 1 1 0 000 2z" clipRule="evenodd" />
@@ -748,15 +779,17 @@ export function CheckoutForm({
                   <div className="h-1 w-full bg-gradient-to-r from-transparent via-green-300/50 to-transparent" aria-hidden="true" />
                 </div>
               ) : (
-                /* Hint: calcula tu remesa primero */
-                <div className="flex flex-col items-center gap-2 rounded-2xl border-2 border-dashed border-amber-200 bg-amber-50/60 px-6 py-5 text-center">
-                  <svg className="h-5 w-5 text-amber-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2} aria-hidden="true">
+                /* Hint: calcula tu remesa primero (rojo si intentó enviar sin monto) */
+                <div className={`flex flex-col items-center gap-2 rounded-2xl border-2 border-dashed px-6 py-5 text-center ${
+                  fieldErrors.remittance ? "border-red-300 bg-red-50/60" : "border-amber-200 bg-amber-50/60"
+                }`}>
+                  <svg className={`h-5 w-5 ${fieldErrors.remittance ? "text-red-400" : "text-amber-400"}`} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2} aria-hidden="true">
                     <path strokeLinecap="round" strokeLinejoin="round" d="M4.5 10.5 12 3m0 0 7.5 7.5M12 3v18" />
                   </svg>
-                  <p className="text-sm font-semibold text-amber-700">
-                    Primero calcula tu remesa arriba ↑
+                  <p className={`text-sm font-semibold ${fieldErrors.remittance ? "text-red-600" : "text-amber-700"}`}>
+                    {fieldErrors.remittance ? "Completa el monto y los métodos arriba para calcular tu remesa ↑" : "Primero calcula tu remesa arriba ↑"}
                   </p>
-                  <p className="text-xs text-amber-500">
+                  <p className={`text-xs ${fieldErrors.remittance ? "text-red-500" : "text-amber-500"}`}>
                     Usa la calculadora para ver el monto que recibirá tu familia
                   </p>
                 </div>

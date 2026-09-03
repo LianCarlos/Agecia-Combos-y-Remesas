@@ -12,7 +12,6 @@ import type { Database } from '@/types/database.types';
 let _supabase: ReturnType<typeof import('@supabase/ssr').createBrowserClient<Database>> | null = null;
 async function getSupabase() {
   if (_supabase) return _supabase;
-  console.log('[TRACE] 🟣 login → Creando cliente Supabase lazy (primera vez)');
   const { createBrowserClient } = await import('@supabase/ssr');
   _supabase = createBrowserClient<Database>(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -78,19 +77,16 @@ function LoginForm() {
     }
     setLoading(true);
     try {
-      console.log('[TRACE] 🟣 login/LoginForm → Llamando supabase.auth.signInWithPassword (email:', email.trim(), ')');
       const client = await getSupabase();
       const { error: authError } = await client.auth.signInWithPassword({
         email: email.trim(),
         password,
       });
-      console.log('[TRACE] 🟣 login/LoginForm → signInWithPassword resultado:', authError ? `ERROR: ${authError.message}` : 'OK');
       if (authError) {
         setError(authError.message === 'Invalid login credentials'
           ? 'Email o contraseña incorrectos'
           : authError.message);
       } else {
-        console.log('[TRACE] 🟣 login/LoginForm → Login OK, cookies actuales:', document.cookie.split(';').filter(c => c.includes('sb-')));
         // Forzar recarga COMPLETA (window.location.href) para que el servidor
         // reciba la cookie de sesión recién creada por createBrowserClient
         window.location.href = redirectTo;

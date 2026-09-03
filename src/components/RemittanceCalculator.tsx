@@ -2,6 +2,7 @@
 
 import { useState, useCallback, useEffect, useRef } from "react";
 import { useRemittanceCalculator } from "@/hooks/useRemittanceCalculator";
+import { formatRate } from "@/lib/utils/format";
 import type { Currency } from "@/types";
 
 /* ═══════════════════════════════════════════════════════════
@@ -396,11 +397,7 @@ export function RemittanceCalculator() {
                 <div className="mt-4 flex flex-wrap items-center justify-center gap-x-3 gap-y-1 text-xs text-white/60">
                   <span className="flex items-center gap-1">
                     <span className="text-white/40">tasa</span>
-                    {result.rateMultiplier >= 10
-                      ? result.rateMultiplier.toFixed(0)
-                      : result.rateMultiplier >= 1
-                        ? result.rateMultiplier.toFixed(2)
-                        : `×${result.rateMultiplier.toFixed(3)}`}
+                    {formatRate(result.rateMultiplier)}
                   </span>
                   <span className="text-white/20">·</span>
                   <span>{result.paymentMethodName}</span>

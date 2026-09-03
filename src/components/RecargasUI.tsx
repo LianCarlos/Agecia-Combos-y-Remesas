@@ -1,8 +1,10 @@
 "use client";
 
 import { useState } from "react";
+import Image from "next/image";
 import { convertToPaymentCurrency } from "@/lib/utils/currency-convert";
 import { useAppData } from "@/components/AppDataProvider";
+import { useModalBehavior } from "@/hooks/useModalBehavior";
 import type { MobileRecharge, RateInfo, PMInfo, CupRate } from "@/types";
 
 /* ═══════════════════════════════════════════════════════════════════════════
@@ -41,6 +43,7 @@ interface RecargaOrderModalProps {
 function RecargaOrderModal({ recarga, onClose, paymentMethods, rates, loading, whatsappPhone }: RecargaOrderModalProps) {
   const [phone, setPhone] = useState("");
   const [pmId, setPMId] = useState("");
+  useModalBehavior(onClose);
 
   const pm = paymentMethods.find(p => p.id === pmId);
   const converted = pmId ? convertToPaymentCurrency(recarga.price_usd, pmId, rates) : null;
@@ -204,11 +207,12 @@ function RechargeCard({
       {/* Imagen */}
       <div className="relative h-44 w-full overflow-hidden bg-gradient-to-br from-brand-green/10 to-emerald-50">
         {recarga.image_url ? (
-          <img
+          <Image
             src={recarga.image_url}
             alt={recarga.title}
-            className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
-            loading="lazy"
+            fill
+            sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
+            className="object-cover transition-transform duration-500 group-hover:scale-105"
           />
         ) : (
           <div className="flex h-full items-center justify-center">

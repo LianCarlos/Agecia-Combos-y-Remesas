@@ -1,7 +1,7 @@
 import { Suspense } from "react";
 import { Header } from "@/components/Header";
 import { Footer } from "@/components/Footer";
-import { MarketTicker } from "@/components/MarketTicker";
+import { MarketTicker, WholesaleTicker } from "@/components/MarketTicker";
 import { RemittanceCalculator } from "@/components/RemittanceCalculator";
 import { ComboCatalog } from "@/components/ComboCatalog";
 import { ProductsCatalog } from "@/components/ProductsCatalog";
@@ -126,8 +126,26 @@ export default async function Home() {
     rate: r.rate,
   }));
 
+  const jsonLd = {
+    "@context": "https://schema.org",
+    "@type": "FinancialService",
+    name: "Mr Factus",
+    description:
+      "Remesas internacionales, combos y recargas móviles a Cuba. Envíos rápidos y seguros con la mejor tasa.",
+    url: "https://www.mrfactusremesas.com",
+    telephone: `+${whatsappPhone}`,
+    areaServed: { "@type": "Country", name: "Cuba" },
+    email: "mrfactusremesas@gmail.com",
+    address: { "@type": "PostalAddress", addressLocality: "La Habana", addressCountry: "CU" },
+    sameAs: [`https://wa.me/${whatsappPhone}`],
+  };
+
   return (
     <CartProvider whatsappPhone={whatsappPhone} paymentMethods={cartPaymentMethods} rates={cartRates}>
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+      />
       <Header whatsappPhone={whatsappPhone} />
 
       <main className="min-h-screen">
@@ -277,6 +295,9 @@ export default async function Home() {
             </div>
             <Suspense fallback={<MarketTickerSkeleton />}>
               <MarketTicker />
+            </Suspense>
+            <Suspense fallback={null}>
+              <WholesaleTicker />
             </Suspense>
           </section>
         </Reveal>

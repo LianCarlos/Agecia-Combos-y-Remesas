@@ -51,11 +51,18 @@
    ═══════════════════════════════════════════════════════════════════════════ */
 
 html {
-  overflow-x: hidden;
+  /* `clip` en vez de `hidden`: clipea el desbordamiento horizontal de las
+     decoraciones SIN convertir el documento en un contenedor de scroll, que
+     es lo que rompía el scroll suave (CSS scroll-behavior y window.scrollTo
+     con behavior:"smooth" dejaban de animar y brincaban de golpe). */
+  overflow-x: clip;
+  /* Deja sitio bajo el header sticky (~64px) al saltar a una sección con
+     enlaces de ancla (#calcular, #tasas, etc.) para que no queden tapadas. */
+  scroll-padding-top: 5rem;
 }
 
 body {
-  overflow-x: hidden;
+  overflow-x: clip;
   background:
     /* Patrón geométrico de líneas grid MUY tenues */
     linear-gradient(rgba(0, 104, 71, 0.018) 1px, transparent 1px),
@@ -640,17 +647,88 @@ main {
   animation: slideInRight 0.3s cubic-bezier(0.25, 0.46, 0.45, 0.94) forwards;
 }
 
+/* ═══════════════════════════════════════════════════════════════════════════
+   COMBO FLIP CARD · Al tocar la imagen, la tarjeta "sale hacia el cliente"
+   (perspectiva 3D + giro) y muestra la descripción en la cara trasera.
+   No cambia colores ni tipografía: solo geometría y movimiento.
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+/* Contenedor: da la perspectiva para que el giro se vea en 3D (profundidad). */
+.flip-scene {
+  perspective: 1400px;
+}
+
+/* Elemento que rota. preserve-3d mantiene las dos caras en el espacio 3D. */
+.flip-card {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  transform-style: preserve-3d;
+  /* La curva de salida da la sensación de "acercarse" y asentarse. */
+  transition: transform 0.7s cubic-bezier(0.22, 1, 0.36, 1);
+  will-change: transform;
+}
+
+/* Estado girado: media vuelta + un leve acercamiento hacia el usuario. */
+.flip-card.is-flipped {
+  transform: rotateY(180deg) translateZ(40px) scale(1.02);
+}
+
+/* Ambas caras ocupan el mismo espacio; se oculta la que mira hacia atrás. */
+.flip-face {
+  position: absolute;
+  inset: 0;
+  backface-visibility: hidden;
+  -webkit-backface-visibility: hidden;
+}
+
+/* La cara trasera arranca ya girada, así queda al frente al voltear. */
+.flip-face-back {
+  transform: rotateY(180deg);
+}
+
+/* Usuarios con "reduce motion": sin giro 3D; cambio instantáneo y accesible
+   mediante opacidad, sin movimiento que pueda marear. */
+@media (prefers-reduced-motion: reduce) {
+  .flip-card {
+    transition: none;
+  }
+  .flip-card.is-flipped {
+    transform: none;
+  }
+  .flip-face {
+    backface-visibility: visible;
+    -webkit-backface-visibility: visible;
+    transition: opacity 0.2s ease;
+  }
+  .flip-face-back {
+    transform: none;
+    opacity: 0;
+    pointer-events: none;
+  }
+  .flip-card.is-flipped .flip-face-front {
+    opacity: 0;
+    pointer-events: none;
+  }
+  .flip-card.is-flipped .flip-face-back {
+    opacity: 1;
+    pointer-events: auto;
+  }
+}
+
 /* ─── Reveal on scroll (IntersectionObserver) ─── */
 .reveal {
   opacity: 0;
   transform: translateY(28px);
-  /* Sin transición al salir: el reset es instantáneo para que la próxima
-     entrada siempre vea la animación de entrada completa. */
-  will-change: opacity, transform;
 }
 .reveal.is-visible {
   opacity: 1;
-  transform: translateY(0);
+  /* `none` (no `translateY(0)`): un transform distinto de `none` convierte a
+     `.reveal` en el "containing block" de cualquier `position: fixed` que tenga
+     dentro (modales de productos/recargas), descolocándolo. Al resolver en
+     reposo a `none` el fixed vuelve a anclarse al viewport. La transición
+     sigue animando desde translateY(28px) hasta la posición final. */
+  transform: none;
   transition:
     opacity 0.55s cubic-bezier(0.22, 1, 0.36, 1),
     transform 0.55s cubic-bezier(0.22, 1, 0.36, 1);

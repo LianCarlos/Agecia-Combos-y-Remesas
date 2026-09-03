@@ -43,9 +43,12 @@ export async function createEmployee(email: string, password: string, fullName: 
 
   if (createError) return { success: false, error: createError.message };
 
+  // El trigger crea el perfil INACTIVO por defecto (migración 007, defensa ante
+  // registro público). Como este alta la hace un superadmin desde el panel,
+  // activamos la cuenta explícitamente para que el empleado pueda entrar.
   const { error: updateError } = await serviceClient
     .from('profiles')
-    .update({ full_name: fullName, role: 'empleado' })
+    .update({ full_name: fullName, role: 'empleado', is_active: true })
     .eq('id', newUser.user.id);
 
   if (updateError) return { success: false, error: updateError.message };

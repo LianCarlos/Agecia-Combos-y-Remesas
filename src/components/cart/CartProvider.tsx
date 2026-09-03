@@ -34,6 +34,21 @@ function sameLine(a: CartItem, id: string, kind: CartItem["kind"]) {
   return a.id === id && a.kind === kind;
 }
 
+function isValidCartItem(x: unknown): x is CartItem {
+  if (typeof x !== "object" || x === null) return false;
+  const it = x as Record<string, unknown>;
+  return (
+    typeof it.id === "string" &&
+    (it.kind === "combo" || it.kind === "product") &&
+    typeof it.title === "string" &&
+    typeof it.price_usd === "number" &&
+    Number.isFinite(it.price_usd) &&
+    typeof it.quantity === "number" &&
+    Number.isFinite(it.quantity) &&
+    it.quantity > 0
+  );
+}
+
 export function CartProvider({
   whatsappPhone,
   paymentMethods,
@@ -49,11 +64,19 @@ export function CartProvider({
   const [isOpen, setIsOpen] = useState(false);
   const [hydrated, setHydrated] = useState(false);
 
-  // Hidratar desde localStorage tras montar (evita mismatch SSR)
+  // Hidratar desde localStorage tras montar (evita mismatch SSR).
+  // Se valida la forma de cada ítem: un valor corrupto o de una versión vieja
+  // se descarta en vez de romper el carrito o inyectar datos basura.
   useEffect(() => {
     try {
       const raw = window.localStorage.getItem(STORAGE_KEY);
-      if (raw) setItems(JSON.parse(raw) as CartItem[]);
+      if (raw) {
+        const parsed: unknown = JSON.parse(raw);
+        if (Array.isArray(parsed)) {
+          const clean = parsed.filter(isValidCartItem);
+          if (clean.length) setItems(clean);
+        }
+      }
     } catch {
       /* ignore */
     }

@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import Link from "next/link";
+import { smoothScrollToId } from "@/lib/smooth-scroll";
 
 /* ═══════════════════════════════════════════════════════════════════════════
    HEADER · Glassmorphism Real + Navegación Mr Factus
@@ -26,13 +27,8 @@ export function Header({ whatsappPhone = "5355555555" }: HeaderProps) {
 
   function scrollToSection(e: React.MouseEvent<HTMLAnchorElement>, href: string) {
     e.preventDefault();
-    const id = href.replace("#", "");
-    const el = document.getElementById(id);
-    if (!el) return;
-    const headerHeight = 64;
-    const top = el.getBoundingClientRect().top + window.scrollY - headerHeight;
-    window.scrollTo({ top, behavior: "smooth" });
     setIsMenuOpen(false);
+    smoothScrollToId(href.replace("#", ""));
   }
 
   const navLinks = [
