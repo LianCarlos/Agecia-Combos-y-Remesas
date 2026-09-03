@@ -18,10 +18,8 @@ function requireEnv(name: string): string {
  * cantidad de instancias creadas por página.
  */
 export const createClient = cache(async () => {
-  console.log('[TRACE] 🟩 server.ts createClient() → Llamando cookies()...');
   const cookieStore = await cookies();
 
-  console.log('[TRACE] 🟩 server.ts createClient() → Creando createServerClient...');
   return createServerClient<Database>(
     requireEnv("SUPABASE_URL"),
     requireEnv("SUPABASE_ANON_KEY"),

@@ -2,6 +2,16 @@
 // Tipos de Entidad (reflejan las tablas de la BD)
 // ============================================================================
 
+export interface WholesaleRate {
+  id: string;
+  payment_method_id: string;
+  min_amount: number;
+  rate: number;
+  active: boolean;
+  created_at: string;
+  payment_methods?: { id: string; name: string } | null;
+}
+
 export interface Currency {
   id: string;
   code: string;

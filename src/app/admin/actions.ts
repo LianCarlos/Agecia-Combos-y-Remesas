@@ -36,6 +36,7 @@ async function requireAdmin(): Promise<Profile> {
   const result = await getCurrentUserAndProfile();
   if (!result?.profile) throw new Error('No autenticado');
   const { profile } = result;
+  if (!profile.is_active) throw new Error('Cuenta desactivada');
   if (profile.role !== 'superadmin' && profile.role !== 'empleado') {
     throw new Error('No autorizado. Se requiere rol de administrador.');
   }

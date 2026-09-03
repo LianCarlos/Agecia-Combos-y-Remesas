@@ -1,15 +1,18 @@
 'use server';
 
+import { scryptSync, randomBytes, timingSafeEqual } from 'crypto';
 import { supabaseAdmin } from '@/lib/supabase/admin';
 import { createClient } from '@/lib/supabase/server';
 import { revalidatePath } from 'next/cache';
 import { getCurrentUserAndProfile } from '@/lib/auth';
-import type { Product, MobileRecharge } from '@/types';
+import type { Product, MobileRecharge, WholesaleRate } from '@/types';
 
 async function requireAdmin() {
   const result = await getCurrentUserAndProfile();
   if (!result?.profile) throw new Error('No autenticado');
   const { profile } = result;
+  // is_active es obligatorio: un empleado desactivado no debe poder escribir.
+  if (!profile.is_active) throw new Error('Cuenta desactivada');
   if (profile.role !== 'superadmin' && profile.role !== 'empleado') {
     throw new Error('No autorizado');
   }
@@ -179,7 +182,7 @@ export async function createComboAction(data: { title: string; description?: str
 }
 export async function updateComboAction(id: string, data: Record<string, unknown>) {
   await requireAdmin();
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+   
   await supabaseAdmin.from('combos').update(data as any).eq('id', id);
   revalidatePath('/admin/combos');
 }
@@ -209,6 +212,11 @@ export async function createEmployeeAction(email: string, password: string) {
   if (profile.role !== 'superadmin') throw new Error('Solo superadmin');
   const { data, error } = await supabaseAdmin.auth.admin.createUser({ email, password, email_confirm: true });
   if (error) throw new Error(error.message);
+  // El trigger crea el perfil INACTIVO (seguridad ante registro público).
+  // Como este alta la hace un superadmin, activamos la cuenta explícitamente.
+  if (data.user?.id) {
+    await supabaseAdmin.from('profiles').update({ is_active: true, role: 'empleado' }).eq('id', data.user.id);
+  }
   revalidatePath('/admin/employees');
   return data;
 }
@@ -270,7 +278,7 @@ export async function updateProductAction(id: string, input: Partial<ProductInpu
   if (input.active !== undefined) updateData.active = input.active;
   const { data, error } = await supabaseAdmin
     .from('products')
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+     
     .update(updateData as any)
     .eq('id', id)
     .select()
@@ -335,7 +343,7 @@ export async function updateRecargaAction(id: string, input: Partial<RecargaInpu
   if (input.active !== undefined) updateData.active = input.active;
   const { data, error } = await supabaseAdmin
     .from('mobile_recharges')
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+     
     .update(updateData as any)
     .eq('id', id)
     .select()
@@ -355,7 +363,18 @@ export async function deleteRecargaAction(id: string): Promise<void> {
 }
 
 /* ═══════════════════════ IMAGE UPLOADS (Storage) ═══════════════════════ */
+const ALLOWED_IMAGE_TYPES = ['image/jpeg', 'image/png', 'image/webp', 'image/gif', 'image/avif'];
+const MAX_IMAGE_BYTES = 5 * 1024 * 1024; // 5 MB
+
 async function uploadImageToStorage(bucket: string, file: File, fallbackPrefix?: string): Promise<string> {
+  // Validación de tipo y tamaño ANTES de subir. No se confía en file.type solo
+  // para el nombre; se usa para rechazar cargas no-imagen.
+  if (!ALLOWED_IMAGE_TYPES.includes(file.type)) {
+    throw new Error('Formato no permitido. Sube una imagen JPG, PNG, WEBP, GIF o AVIF.');
+  }
+  if (file.size > MAX_IMAGE_BYTES) {
+    throw new Error('La imagen supera el límite de 5 MB.');
+  }
   const safe = file.name.replace(/[^a-zA-Z0-9._-]/g, '_');
   const fileName = `public/${Date.now()}_${safe}`;
   const buffer = Buffer.from(await file.arrayBuffer());
@@ -433,6 +452,31 @@ export async function getAdminInitDataAction(): Promise<{
 }
 
 /* ═══════════════════════ SITE SETTINGS (admin password) ═══════════════════════ */
+// ── Hasheo de contraseña (scrypt, formato "scrypt$<salt hex>$<hash hex>") ──
+// Nunca se guarda en texto plano. `verifyPassword` acepta también el valor en
+// claro heredado (registros previos a este cambio) para no bloquear el acceso,
+// re-hasheándolo en el próximo cambio de contraseña.
+function hashPassword(plain: string): string {
+  const salt = randomBytes(16);
+  const hash = scryptSync(plain, salt, 64);
+  return `scrypt$${salt.toString('hex')}$${hash.toString('hex')}`;
+}
+
+function verifyPassword(plain: string, stored: string): boolean {
+  if (!stored) return false;
+  if (stored.startsWith('scrypt$')) {
+    const [, saltHex, hashHex] = stored.split('$');
+    if (!saltHex || !hashHex) return false;
+    const expected = Buffer.from(hashHex, 'hex');
+    const actual = scryptSync(plain, Buffer.from(saltHex, 'hex'), expected.length);
+    return expected.length === actual.length && timingSafeEqual(expected, actual);
+  }
+  // Compatibilidad con valores heredados en texto plano.
+  const a = Buffer.from(plain);
+  const b = Buffer.from(stored);
+  return a.length === b.length && timingSafeEqual(a, b);
+}
+
 export async function getAdminPasswordStatusAction(): Promise<{ adminPassword: string | null }> {
   await requireAdmin();
   const { data } = await supabaseAdmin
@@ -458,13 +502,17 @@ export async function updateAdminPasswordAction(currentPassword: string, newPass
 
   const dbPassword = setting?.value ?? '';
   const envPassword = process.env.ADMIN_API_TOKEN ?? '';
-  const effectivePassword = dbPassword !== '' ? dbPassword : envPassword;
 
-  if (currentPassword.trim() !== effectivePassword) throw new Error('La contraseña actual es incorrecta');
+  // Valida contra el hash almacenado (o el texto plano heredado); si no hay
+  // ninguno configurado en BD, cae al token de entorno.
+  const ok = dbPassword !== ''
+    ? verifyPassword(currentPassword.trim(), dbPassword)
+    : currentPassword.trim() === envPassword;
+  if (!ok) throw new Error('La contraseña actual es incorrecta');
 
   const { error } = await supabaseAdmin
     .from('site_settings')
-    .upsert({ key: 'admin_password', value: newPassword.trim(), updated_at: new Date().toISOString() }, { onConflict: 'key' });
+    .upsert({ key: 'admin_password', value: hashPassword(newPassword.trim()), updated_at: new Date().toISOString() }, { onConflict: 'key' });
   if (error) throw new Error('Error al guardar la configuración');
   return { success: true };
 }
@@ -473,4 +521,46 @@ export async function updateAdminPasswordAction(currentPassword: string, newPass
 export async function logoutAction(): Promise<void> {
   const supabase = await createClient();
   await supabase.auth.signOut();
+}
+
+/* ═══════════════════════════════════════════════════════
+   TASAS MAYORISTAS (Wholesale Rates)
+   ═══════════════════════════════════════════════════════ */
+
+export async function getWholesaleRatesAction(): Promise<WholesaleRate[]> {
+  await requireAdmin();
+  const { data } = await supabaseAdmin
+    .from('wholesale_rates')
+    .select('*, payment_methods(id, name)')
+    .order('payment_method_id')
+    .order('min_amount', { ascending: true });
+  return (data ?? []) as WholesaleRate[];
+}
+
+export async function createWholesaleRateAction(pmId: string, minAmount: number, rate: number): Promise<WholesaleRate> {
+  await requireAdmin();
+  const { data, error } = await supabaseAdmin
+    .from('wholesale_rates')
+    .insert({ payment_method_id: pmId, min_amount: minAmount, rate })
+    .select('*, payment_methods(id, name)')
+    .single();
+  if (error) throw new Error(error.message);
+  revalidatePath('/admin/exchange-rates');
+  revalidatePath('/');
+  return data as WholesaleRate;
+}
+
+export async function updateWholesaleRateAction(id: string, updates: { min_amount?: number; rate?: number; active?: boolean }): Promise<void> {
+  await requireAdmin();
+  const { error } = await supabaseAdmin.from('wholesale_rates').update(updates).eq('id', id);
+  if (error) throw new Error(error.message);
+  revalidatePath('/admin/exchange-rates');
+  revalidatePath('/');
+}
+
+export async function deleteWholesaleRateAction(id: string): Promise<void> {
+  await requireAdmin();
+  await supabaseAdmin.from('wholesale_rates').delete().eq('id', id);
+  revalidatePath('/admin/exchange-rates');
+  revalidatePath('/');
 }

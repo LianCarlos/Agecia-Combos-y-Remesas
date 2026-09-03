@@ -88,7 +88,7 @@ export async function updatePaymentMethod(
 
   const { data, error } = await supabase
     .from("payment_methods")
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+     
     .update(updateData as any)
     .eq("id", id)
     .select("*, currencies(*)")
