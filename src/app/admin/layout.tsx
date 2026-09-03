@@ -11,20 +11,18 @@ export const metadata = {
 };
 
 export default async function AdminLayout({ children }: { children: ReactNode }) {
-  console.log('[TRACE] 🟪 AdminLayout → Renderizando layout admin', { timestamp: new Date().toISOString() });
   // UNA sola llamada a Supabase — obtiene user + profile juntos
   const result = await getCurrentUserAndProfile();
 
-  console.log('[TRACE] 🟪 AdminLayout → getCurrentUserAndProfile resultado:', result ? { userId: result.userId, role: result.profile?.role } : 'NULL');
-
   if (!result) {
-    console.log('[TRACE] 🟪 AdminLayout → Sin sesión, redirigiendo a login');
     redirect('/login?redirect=/admin');
   }
 
-  const { userId, email, profile } = result;
-  const isAdminUser = profile?.role === 'superadmin' || profile?.role === 'empleado';
-  const isSuperAdmin = profile?.role === 'superadmin';
+  const { email, profile } = result;
+  // Exige rol admin Y cuenta activa (una cuenta desactivada no entra al panel).
+  const isAdminUser =
+    (profile?.role === 'superadmin' || profile?.role === 'empleado') && profile?.is_active === true;
+  const isSuperAdmin = profile?.role === 'superadmin' && profile?.is_active === true;
 
   if (!isAdminUser) {
     redirect('/login?redirect=/admin');

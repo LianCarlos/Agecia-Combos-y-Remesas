@@ -1,18 +1,17 @@
 /**
- * Tests para useCombos hook
- * Capa 2 — Hook (mockea fetch, no toca Supabase)
+ * Tests para useCombos / useProducts.
+ *
+ * Arquitectura actual: los catálogos se siembran desde el servidor (SSR) y se
+ * pasan como initialData. Los hooks ya NO hacen fetch en el cliente: devuelven
+ * los datos recibidos con loading=false y error=null.
  */
 
-// ─── Mocks de fetch global ────────────────────────────────────────
-const mockFetch = jest.fn();
-global.fetch = mockFetch;
-
-// ─── Imports ──────────────────────────────────────────────────────
-import { renderHook, act } from "@testing-library/react";
+import { renderHook } from "@testing-library/react";
 import { useCombos } from "../useCombos";
+import { useProducts } from "../useProducts";
+import type { Combo, Product } from "@/types";
 
-// ─── Fixtures (campos en inglés: title, description, price_usd, image_url, available) ──
-const mockCombosData = [
+const mockCombos: Combo[] = [
   {
     id: "combo-1",
     title: "Combo Familiar",
@@ -36,105 +35,47 @@ const mockCombosData = [
 ];
 
 describe("useCombos", () => {
-  beforeEach(() => {
-    jest.clearAllMocks();
-  });
-
-  it("estado inicial: loading=true, combos vacíos, sin error", () => {
-    // Fetch nunca resuelve para mantener loading=true
-    mockFetch.mockImplementation(() => new Promise(() => {}));
-
+  it("sin initialData devuelve lista vacía, sin loading y sin error", () => {
     const { result } = renderHook(() => useCombos());
-
-    expect(result.current.loading).toBe(true);
-    expect(result.current.combos).toEqual([]);
-    expect(result.current.error).toBeNull();
-  });
-
-  it("fetch exitoso retorna combos y loading=false", async () => {
-    mockFetch.mockResolvedValueOnce({
-      ok: true,
-      json: async () => mockCombosData,
-    });
-
-    const { result } = renderHook(() => useCombos());
-
-    // Inicialmente loading=true
-    expect(result.current.loading).toBe(true);
-
-    await act(async () => {
-      await new Promise((r) => setTimeout(r, 0));
-    });
-
     expect(result.current.loading).toBe(false);
-    expect(result.current.combos).toEqual(mockCombosData);
     expect(result.current.error).toBeNull();
+    expect(result.current.combos).toEqual([]);
   });
 
-  it("fetch exitoso retorna combos con campos en inglés", async () => {
-    mockFetch.mockResolvedValueOnce({
-      ok: true,
-      json: async () => mockCombosData,
-    });
-
-    const { result } = renderHook(() => useCombos());
-
-    await act(async () => {
-      await new Promise((r) => setTimeout(r, 0));
-    });
-
+  it("devuelve los combos sembrados desde el servidor", () => {
+    const { result } = renderHook(() => useCombos(mockCombos));
+    expect(result.current.loading).toBe(false);
+    expect(result.current.error).toBeNull();
+    expect(result.current.combos).toHaveLength(2);
     expect(result.current.combos[0].title).toBe("Combo Familiar");
-    expect(result.current.combos[0].description).toBe("Para toda la familia");
     expect(result.current.combos[0].price_usd).toBe(49.99);
-    expect(result.current.combos[0].image_url).toBeNull();
-    expect(result.current.combos[0].available).toBe(true);
   });
+});
 
-  it("fetch fallido (response no ok) setea error y loading=false", async () => {
-    mockFetch.mockResolvedValueOnce({
-      ok: false,
-      status: 500,
-    });
+describe("useProducts", () => {
+  const mockProducts: Product[] = [
+    {
+      id: "prod-1",
+      title: "Aceite de Oliva",
+      description: "900 ML",
+      price_usd: 2.5,
+      image_url: null,
+      active: true,
+      created_at: "2026-01-01",
+      updated_at: "2026-06-01",
+    },
+  ];
 
-    const { result } = renderHook(() => useCombos());
-
-    await act(async () => {
-      await new Promise((r) => setTimeout(r, 0));
-    });
-
+  it("sin initialData devuelve lista vacía, sin loading y sin error", () => {
+    const { result } = renderHook(() => useProducts());
     expect(result.current.loading).toBe(false);
-    expect(result.current.error).toBe("Error al cargar combos");
-    expect(result.current.combos).toEqual([]);
-  });
-
-  it("fetch lanza excepción setea error y loading=false", async () => {
-    mockFetch.mockRejectedValueOnce(new Error("Network error"));
-
-    const { result } = renderHook(() => useCombos());
-
-    await act(async () => {
-      await new Promise((r) => setTimeout(r, 0));
-    });
-
-    expect(result.current.loading).toBe(false);
-    expect(result.current.error).toBe("Error al cargar combos");
-    expect(result.current.combos).toEqual([]);
-  });
-
-  it("retorna array vacío si el API retorna array vacío", async () => {
-    mockFetch.mockResolvedValueOnce({
-      ok: true,
-      json: async () => [],
-    });
-
-    const { result } = renderHook(() => useCombos());
-
-    await act(async () => {
-      await new Promise((r) => setTimeout(r, 0));
-    });
-
-    expect(result.current.loading).toBe(false);
-    expect(result.current.combos).toEqual([]);
     expect(result.current.error).toBeNull();
+    expect(result.current.products).toEqual([]);
+  });
+
+  it("devuelve los productos sembrados desde el servidor", () => {
+    const { result } = renderHook(() => useProducts(mockProducts));
+    expect(result.current.products).toHaveLength(1);
+    expect(result.current.products[0].title).toBe("Aceite de Oliva");
   });
 });

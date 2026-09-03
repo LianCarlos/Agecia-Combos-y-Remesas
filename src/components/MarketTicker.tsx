@@ -1,4 +1,7 @@
 import { getExchangeRates } from "@/lib/services/exchange-rates";
+import { getActiveWholesaleRates } from "@/lib/services/wholesale-rates";
+import { formatRate, relativeTime } from "@/lib/utils/format";
+import type { WholesaleRate } from "@/types";
 
 /* ─── Currency Code → Flag Map ─── */
 
@@ -24,28 +27,28 @@ function getFlag(currencyCode: string): string {
   return CURRENCY_FLAGS[currencyCode.toUpperCase()] ?? "🌎";
 }
 
-/* ─── Relative Time Helper ─── */
-
-function relativeTime(isoDate: string): string {
-  const diffMs = Date.now() - new Date(isoDate).getTime();
-  const diffMin = Math.floor(diffMs / 60_000);
-  if (diffMin < 1) return "ahora";
-  if (diffMin < 60) return `${diffMin}min`;
-  const diffHrs = Math.floor(diffMin / 60);
-  if (diffHrs < 24) return `${diffHrs}h`;
-  const diffDays = Math.floor(diffHrs / 24);
-  return `${diffDays}d`;
-}
-
 /* ═══════════════════════════════════════════════════════════════════════════
    RATE PANEL · Bloomberg Terminal Style
    Panel lateral derecho — fondo negro-verdoso, tipografía mono,
    efecto scanline, dot pulsante verde, tasas en #00ff88
    ═══════════════════════════════════════════════════════════════════════════ */
 
+/* ─── Wholesale Rate grouping helper ─── */
+function groupByPM(rates: WholesaleRate[]): { pmName: string; tiers: WholesaleRate[] }[] {
+  const map = new Map<string, WholesaleRate[]>();
+  for (const r of rates) {
+    const key = r.payment_methods?.name ?? "Otro";
+    if (!map.has(key)) map.set(key, []);
+    map.get(key)!.push(r);
+  }
+  return Array.from(map.entries()).map(([pmName, tiers]) => ({ pmName, tiers }));
+}
+
 export async function MarketTicker() {
   const rates = await getExchangeRates();
 
+  // Sin tasas normales no se renderiza este panel (las mayoristas tienen el
+  // suyo propio en <WholesaleTicker>). Evita el "0 PARES · ACTUALIZADO —".
   if (rates.length === 0) return null;
 
   return (
@@ -109,13 +112,9 @@ export async function MarketTicker() {
                 {r.deliveryMethod}
               </span>
 
-              {/* TASA en verde brillante — formato inteligente */}
+              {/* TASA en verde brillante — formato coherente en todo el sitio */}
               <span className="text-sm font-bold tracking-tight text-[#00ff88]">
-                {r.rate >= 10
-                  ? r.rate.toFixed(0)
-                  : r.rate >= 1
-                    ? r.rate.toFixed(2)
-                    : `×${r.rate.toFixed(3)}`}
+                {formatRate(r.rate)}
               </span>
 
               {/* Hora relativa en gris tenue */}
@@ -151,6 +150,88 @@ export async function MarketTicker() {
           background:
             "linear-gradient(90deg, transparent, rgba(0,255,136,0.3), rgba(0,255,136,0.3), transparent)",
         }}
+        aria-hidden="true"
+      />
+    </aside>
+  );
+}
+
+/* ─── Panel de tasas mayoristas (Bloomberg style) ─── */
+
+export async function WholesaleTicker() {
+  const wholesaleRates = await getActiveWholesaleRates().catch(() => [] as WholesaleRate[]);
+  if (wholesaleRates.length === 0) return null;
+
+  const groups = groupByPM(wholesaleRates);
+
+  return (
+    <aside
+      aria-label="Tasas mayoristas para envíos grandes"
+      className="card-rate scanline-overlay w-full overflow-hidden mt-4"
+    >
+      {/* Header */}
+      <div className="flex items-center justify-between border-b border-green-900/30 px-4 py-3">
+        <div className="flex items-center gap-2">
+          <span className="text-[#00ff88] text-xs" aria-hidden="true">◈</span>
+          <span className="font-mono text-[11px] font-bold uppercase tracking-[0.15em] text-[#00ff88]">
+            ENVÍOS MAYORISTAS
+          </span>
+        </div>
+        <span className="font-mono text-[10px] uppercase tracking-wider text-green-700/40">
+          BULK
+        </span>
+      </div>
+
+      {/* Subtitle */}
+      <div className="border-b border-green-900/20 px-4 py-2">
+        <p className="font-mono text-[9px] uppercase tracking-wider text-green-700/40">
+          Mientras más envías, mejor tasa recibes
+        </p>
+      </div>
+
+      {/* Groups by payment method */}
+      <div className="divide-y divide-green-900/20">
+        {groups.map(({ pmName, tiers }) => (
+          <div key={pmName}>
+            {/* PM header row */}
+            <div className="flex items-center gap-2 px-4 py-1.5 bg-[#00ff88]/[0.03]">
+              <span className="font-mono text-[10px] font-bold uppercase tracking-wider text-green-600/60">
+                {pmName}
+              </span>
+            </div>
+            {/* Tiers */}
+            {tiers.map((tier) => (
+              <div
+                key={tier.id}
+                className="flex items-center gap-2 px-4 py-2 font-mono text-xs transition-colors hover:bg-[#00ff88]/[0.03]"
+              >
+                <span className="text-[10px] text-green-700/50" aria-hidden="true">+</span>
+                <span className="w-20 shrink-0 text-[11px] font-semibold text-slate-300">
+                  ${tier.min_amount >= 1000
+                    ? `${(tier.min_amount / 1000).toFixed(tier.min_amount % 1000 === 0 ? 0 : 1)}k`
+                    : tier.min_amount.toFixed(0)}
+                </span>
+                <span className="text-[10px] text-green-700/40" aria-hidden="true">───────</span>
+                <span className="ml-auto text-sm font-bold tracking-tight text-[#00ff88]">
+                  {formatRate(tier.rate)}
+                </span>
+                <span className="text-[9px] text-green-700/40">CUP</span>
+              </div>
+            ))}
+          </div>
+        ))}
+      </div>
+
+      {/* Footer */}
+      <div className="border-t border-green-900/30 px-4 py-2">
+        <span className="font-mono text-[9px] uppercase tracking-wider text-green-700/25">
+          Tasas preferenciales · Consultar disponibilidad
+        </span>
+      </div>
+
+      <div
+        className="h-[1px] w-full"
+        style={{ background: "linear-gradient(90deg, transparent, rgba(0,255,136,0.3), rgba(0,255,136,0.3), transparent)" }}
         aria-hidden="true"
       />
     </aside>

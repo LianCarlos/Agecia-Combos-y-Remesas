@@ -307,6 +307,41 @@ export interface Database {
         }
         Relationships: []
       }
+      wholesale_rates: {
+        Row: {
+          id: string
+          payment_method_id: string
+          min_amount: number
+          rate: number
+          active: boolean
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          payment_method_id: string
+          min_amount: number
+          rate: number
+          active?: boolean
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          payment_method_id?: string
+          min_amount?: number
+          rate?: number
+          active?: boolean
+          created_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "wholesale_rates_payment_method_id_fkey"
+            columns: ["payment_method_id"]
+            isOneToOne: false
+            referencedRelation: "payment_methods"
+            referencedColumns: ["id"]
+          }
+        ]
+      }
     }
     Views: {}
     Functions: {
