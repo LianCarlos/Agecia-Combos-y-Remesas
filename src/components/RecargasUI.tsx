@@ -5,7 +5,8 @@ import Image from "next/image";
 import { convertToPaymentCurrency } from "@/lib/utils/currency-convert";
 import { useAppData } from "@/components/AppDataProvider";
 import { useModalBehavior } from "@/hooks/useModalBehavior";
-import type { MobileRecharge, RateInfo, PMInfo, CupRate } from "@/types";
+import { createOrder } from "@/lib/actions/orders";
+import type { MobileRecharge, RateInfo, PMInfo, CupRate, CreateOrderInput } from "@/types";
 
 /* ═══════════════════════════════════════════════════════════════════════════
    TYPES
@@ -70,6 +71,16 @@ function RecargaOrderModal({ recarga, onClose, paymentMethods, rates, loading, w
       `📅 ${new Date().toLocaleString("es-CU", { timeZone: "America/Havana" })}`,
       `✅ Pedido desde Mr Factus`,
     ].filter((l): l is string => l !== null);
+
+    // Registrar el pedido en el admin (fire-and-forget: no bloquea WhatsApp).
+    const orderInput: CreateOrderInput = {
+      order_type: "recharge",
+      beneficiary_phone: `+53${phone}`,
+      payment_method_id: pmId || null,
+      amount_usd: recarga.price_usd,
+      payload: { title: recarga.title, phone: `+53${phone}`, priceUsd: recarga.price_usd },
+    };
+    void createOrder(orderInput);
 
     window.open(
       `https://wa.me/${whatsappPhone ?? "5355555555"}?text=${encodeURIComponent(lines.join("\n"))}`,

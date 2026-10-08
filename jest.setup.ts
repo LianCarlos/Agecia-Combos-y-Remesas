@@ -1,4 +1,10 @@
 import "@testing-library/jest-dom";
+import { TextEncoder, TextDecoder } from "util";
+
+// Polyfills de Web APIs que usan los módulos de servidor de Next.js
+// (next/cache → revalidatePath) y que el entorno jsdom de Jest no expone.
+globalThis.TextEncoder = TextEncoder as typeof globalThis.TextEncoder;
+globalThis.TextDecoder = TextDecoder as typeof globalThis.TextDecoder;
 
 // Variables de entorno de prueba: permiten que los módulos que instancian el
 // cliente de Supabase al importarse (supabaseAdmin) se carguen en los tests sin

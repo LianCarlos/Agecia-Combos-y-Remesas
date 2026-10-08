@@ -70,6 +70,71 @@ function EmployeesIcon({ active }: { active: boolean }) {
   );
 }
 
+function CountriesIcon({ active }: { active: boolean }) {
+  return (
+    <svg className={`h-5 w-5 ${active ? 'text-white' : 'text-slate-400 group-hover:text-white'}`} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+      <path strokeLinecap="round" strokeLinejoin="round" d="M4.5 3v18M4.5 4.5h11l-2.5 4 2.5 4h-11" />
+    </svg>
+  );
+}
+
+function AccountsIcon({ active }: { active: boolean }) {
+  return (
+    <svg className={`h-5 w-5 ${active ? 'text-white' : 'text-slate-400 group-hover:text-white'}`} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+      <path strokeLinecap="round" strokeLinejoin="round" d="M3.75 21h16.5M4.5 3h15M5.25 3v18m13.5-18v18M9 6.75h1.5m-1.5 3h1.5m-1.5 3h1.5m3-6H15m-1.5 3H15m-1.5 3H15M9 21v-3.375c0-.621.504-1.125 1.125-1.125h3.75c.621 0 1.125.504 1.125 1.125V21" />
+    </svg>
+  );
+}
+
+function RepartidoresIcon({ active }: { active: boolean }) {
+  return (
+    <svg className={`h-5 w-5 ${active ? 'text-white' : 'text-slate-400 group-hover:text-white'}`} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+      <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 6a3.75 3.75 0 1 1-7.5 0 3.75 3.75 0 0 1 7.5 0ZM4.501 20.118a7.5 7.5 0 0 1 14.998 0A17.933 17.933 0 0 1 12 21.75c-2.676 0-5.216-.584-7.499-1.632Z" />
+    </svg>
+  );
+}
+
+function UsdtIcon({ active }: { active: boolean }) {
+  return (
+    <svg className={`h-5 w-5 ${active ? 'text-white' : 'text-slate-400 group-hover:text-white'}`} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+      <path strokeLinecap="round" strokeLinejoin="round" d="M7.5 21 3 16.5m0 0L7.5 12M3 16.5h13.5m0-13.5L21 7.5m0 0L16.5 12M21 7.5H7.5" />
+    </svg>
+  );
+}
+
+function CommissionsIcon({ active }: { active: boolean }) {
+  return (
+    <svg className={`h-5 w-5 ${active ? 'text-white' : 'text-slate-400 group-hover:text-white'}`} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+      <path strokeLinecap="round" strokeLinejoin="round" d="M10.5 6a7.5 7.5 0 1 0 7.5 7.5h-7.5V6Z" />
+      <path strokeLinecap="round" strokeLinejoin="round" d="M13.5 10.5H21A7.5 7.5 0 0 0 13.5 3v7.5Z" />
+    </svg>
+  );
+}
+
+function ReferrersIcon({ active }: { active: boolean }) {
+  return (
+    <svg className={`h-5 w-5 ${active ? 'text-white' : 'text-slate-400 group-hover:text-white'}`} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+      <path strokeLinecap="round" strokeLinejoin="round" d="M13.19 8.688a4.5 4.5 0 0 1 1.242 7.244l-4.5 4.5a4.5 4.5 0 0 1-6.364-6.364l1.757-1.757m13.35-.622 1.757-1.757a4.5 4.5 0 0 0-6.364-6.364l-4.5 4.5a4.5 4.5 0 0 0 1.242 7.244" />
+    </svg>
+  );
+}
+
+function OrdersIcon({ active }: { active: boolean }) {
+  return (
+    <svg className={`h-5 w-5 ${active ? 'text-white' : 'text-slate-400 group-hover:text-white'}`} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+      <path strokeLinecap="round" strokeLinejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5.586a1 1 0 0 1 .707.293l5.414 5.414a1 1 0 0 1 .293.707V19a2 2 0 0 1-2 2Z" />
+    </svg>
+  );
+}
+
+function RemesasIcon({ active }: { active: boolean }) {
+  return (
+    <svg className={`h-5 w-5 ${active ? 'text-white' : 'text-slate-400 group-hover:text-white'}`} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+      <path strokeLinecap="round" strokeLinejoin="round" d="M2.25 18.75a60.07 60.07 0 0 1 15.797 2.101c.727.198 1.453-.342 1.453-1.096V18.75M3.75 4.5v.75A.75.75 0 0 1 3 6h-.75m0 0v-.375c0-.621.504-1.125 1.125-1.125H20.25M2.25 6v9m18-10.5v.75c0 .414.336.75.75.75h.75m-1.5-1.5h.375c.621 0 1.125.504 1.125 1.125v9.75c0 .621-.504 1.125-1.125 1.125h-.375m1.5-1.5H21a.75.75 0 0 0-.75.75v.75m0 0H3.75m0 0h-.375a1.125 1.125 0 0 1-1.125-1.125V15m1.5 1.5v-.75A.75.75 0 0 0 3 15h-.75M15 10.5a3 3 0 1 1-6 0 3 3 0 0 1 6 0Zm3 0h.008v.008H18V10.5Zm-12 0h.008v.008H6V10.5Z" />
+    </svg>
+  );
+}
+
 /* ─── Nav Link ─── */
 
 interface NavLinkProps {
@@ -116,6 +181,8 @@ export function AdminSidebar({ isSuperAdmin, collapsed: collapsedProp, onCollaps
 
   const navItems = [
     { href: '/admin', icon: DashboardIcon, label: 'Dashboard' },
+    { href: '/admin/orders', icon: OrdersIcon, label: 'Pedidos' },
+    { href: '/admin/remittances', icon: RemesasIcon, label: 'Remesas' },
     { href: '/admin/currencies', icon: CurrenciesIcon, label: 'Países / Monedas' },
     { href: '/admin/payment-methods', icon: PaymentIcon, label: 'Métodos de Pago' },
     { href: '/admin/delivery-methods', icon: DeliveryIcon, label: 'Métodos de Entrega' },
@@ -123,7 +190,15 @@ export function AdminSidebar({ isSuperAdmin, collapsed: collapsedProp, onCollaps
     { href: '/admin/combos', icon: CombosIcon, label: 'Combos y Productos' },
     { href: '/admin/recargas', icon: RecargasIcon, label: 'Recargas' },
     ...(isSuperAdmin
-      ? [{ href: '/admin/employees', icon: EmployeesIcon, label: 'Empleados' }]
+      ? [
+          { href: '/admin/countries', icon: CountriesIcon, label: 'Países de Origen' },
+          { href: '/admin/accounts', icon: AccountsIcon, label: 'Cuentas' },
+          { href: '/admin/delivery-persons', icon: RepartidoresIcon, label: 'Repartidores' },
+          { href: '/admin/conversion-rates', icon: UsdtIcon, label: 'Tasas USDT' },
+          { href: '/admin/commissions', icon: CommissionsIcon, label: 'Comisiones' },
+          { href: '/admin/referrers', icon: ReferrersIcon, label: 'Referidores' },
+          { href: '/admin/employees', icon: EmployeesIcon, label: 'Empleados' },
+        ]
       : []),
   ];
 

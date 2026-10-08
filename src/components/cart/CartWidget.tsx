@@ -3,8 +3,9 @@
 import { useState, useEffect } from "react";
 import { useCart } from "./CartProvider";
 import { convertToPaymentCurrency } from "@/lib/utils/currency-convert";
+import { createOrder } from "@/lib/actions/orders";
 import { generateWhatsAppOrderUrl } from "@/lib/utils/whatsapp";
-import type { WhatsAppOrderData } from "@/types";
+import type { CreateOrderInput, WhatsAppOrderData } from "@/types";
 
 /* ─── Icons ─── */
 
@@ -79,6 +80,26 @@ export function CartWidget() {
       },
       orderDate: new Date().toISOString(),
     };
+
+    // Registrar el pedido en el admin (fire-and-forget: no bloquea WhatsApp).
+    const orderInput: CreateOrderInput = {
+      order_type: "cart",
+      beneficiary_name: name.trim(),
+      beneficiary_ci: ci.trim() || null,
+      beneficiary_phone: `+53${phone.trim()}`,
+      beneficiary_address: address.trim() || null,
+      payment_method_id: pmId || null,
+      amount_usd: totalUSD,
+      items: items.map((it) => ({
+        kind: it.kind,
+        item_id: it.id,
+        title: it.title,
+        price_usd: it.price_usd,
+        quantity: it.quantity,
+      })),
+      payload: { paymentMethod: pm?.name ?? null, payAmountLabel },
+    };
+    void createOrder(orderInput);
 
     window.open(generateWhatsAppOrderUrl(orderData, whatsappPhone), "_blank", "noopener,noreferrer");
     clear();

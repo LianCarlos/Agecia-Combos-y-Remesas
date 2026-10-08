@@ -2,11 +2,13 @@
 
 import { useState, useEffect } from "react";
 import { useRemittanceCalculator } from "@/hooks/useRemittanceCalculator";
+import { createOrder } from "@/lib/actions/orders";
 import { generateWhatsAppOrderUrl } from "@/lib/utils/whatsapp";
 import type {
   SenderData,
   BeneficiaryData,
   WhatsAppOrderData,
+  CreateOrderInput,
 } from "@/types";
 
 // Claves de error con namespace: emisor y beneficiario NO comparten estado
@@ -276,6 +278,27 @@ export function CheckoutForm({
         : undefined,
       orderDate: new Date().toISOString(),
     };
+
+    // Registrar el pedido en el admin (fire-and-forget: no bloquea WhatsApp).
+    const orderInput: CreateOrderInput = {
+      order_type: "remittance",
+      sender_name: sender.fullName.trim(),
+      sender_phone: sender.phone.trim(),
+      sender_country: sender.country.trim() || originCountry,
+      beneficiary_name: beneficiary.fullName.trim(),
+      beneficiary_ci: beneficiary.idCard.trim(),
+      beneficiary_phone: beneficiary.phone.trim(),
+      beneficiary_address: beneficiary.address.trim(),
+      beneficiary_card_number: requiresBankData ? beneficiary.cardNumber?.trim() ?? null : null,
+      beneficiary_confirmation_phone: requiresBankData ? beneficiary.confirmationPhone?.trim() ?? null : null,
+      currency_code: cleanCurrency,
+      payment_method_id: selectedPaymentMethod?.id ?? null,
+      delivery_method_id: selectedDeliveryMethod?.id ?? null,
+      amount_origin: amount,
+      receiving_amount: receivingAmount ?? null,
+      rate_multiplier: rateMultiplier ?? null,
+    };
+    void createOrder(orderInput);
 
     const url = generateWhatsAppOrderUrl(orderData, whatsappPhone);
     window.open(url, "_blank", "noopener,noreferrer");
